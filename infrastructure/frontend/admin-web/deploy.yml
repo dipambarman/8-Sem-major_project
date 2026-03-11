@@ -1,0 +1,16 @@
+# Admin web dashboard deployment configuration
+deploy:
+  platform: vercel
+  framework: vite-react
+  
+build:
+  command: npm run build
+  output: dist
+  
+environment:
+  VITE_API_BASE_URL: https://api.smart-canteen.com
+  VITE_APP_ENV: production
+  
+domains:
+  - admin.smart-canteen.com
+  - canteen-admin.vercel.app

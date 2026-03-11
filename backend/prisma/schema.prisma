@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model MenuItem {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(255)
+  description String?
+  price       Float
+  vendorid    Int
+  isavailable Boolean  @default(true)
+  category    String?  @db.VarChar(255)
+  createdat   DateTime @default(now()) @db.Timestamp(6)
+  updatedat   DateTime @default(now()) @db.Timestamp(6)
+  Vendor      Vendor   @relation(fields: [vendorid], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_vendor")
+  Order       Order[]
+  Review      Review[]
+}
+
+model Order {
+  id         Int      @id @default(autoincrement())
+  userid     Int
+  menuitemid Int
+  quantity   Int
+  status     String   @db.VarChar(50)
+  totalprice Float
+  orderedat  DateTime @default(now()) @db.Timestamp(6)
+  updatedat  DateTime @default(now()) @db.Timestamp(6)
+  paymentid  Int?
+  MenuItem   MenuItem @relation(fields: [menuitemid], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_menuitem")
+  User       User     @relation(fields: [userid], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user")
+  Payment    Payment?
+}
+
+model Payment {
+  id          Int       @id @default(autoincrement())
+  orderid     Int       @unique
+  amount      Float
+  paymentmode String    @db.VarChar(50)
+  status      String    @db.VarChar(50)
+  paidat      DateTime? @db.Timestamp(6)
+  createdat   DateTime  @default(now()) @db.Timestamp(6)
+  Order       Order     @relation(fields: [orderid], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_order")
+}
+
+model Reservation {
+  id             Int      @id @default(autoincrement())
+  userid         Int
+  reservedat     DateTime @db.Timestamp(6)
+  numberofpeople Int
+  status         String   @db.VarChar(50)
+  createdat      DateTime @default(now()) @db.Timestamp(6)
+  updatedat      DateTime @default(now()) @db.Timestamp(6)
+  User           User     @relation(fields: [userid], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user")
+}
+
+model User {
+  id            Int           @id @default(autoincrement())
+  email         String        @unique @db.VarChar(255)
+  passwordHash  String        @db.VarChar(255)
+  fullName      String        @db.VarChar(255)
+  phone         String        @db.VarChar(20)
+  userType      String        @default("regular") @db.VarChar(50)
+  createdAt     DateTime      @default(now()) @db.Timestamp(6)
+  updatedAt     DateTime      @default(now()) @db.Timestamp(6)
+  Order         Order[]
+  Reservation   Reservation[]
+  Wallet        Wallet?
+  Notification  Notification[]
+  Review        Review[]
+}
+
+model Wallet {
+  id        Int     @id @default(autoincrement())
+  userId    Int     @unique
+  balance   Float   @default(0.00)
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  updatedAt DateTime @default(now()) @db.Timestamp(6)
+  User      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Vendor {
+  id        Int        @id @default(autoincrement())
+  name      String     @db.VarChar(255)
+  email     String     @unique @db.VarChar(255)
+  password  String     @db.VarChar(255)
+  isactive  Boolean    @default(true)
+  createdat DateTime   @default(now()) @db.Timestamp(6)
+  updatedat DateTime   @default(now()) @db.Timestamp(6)
+  MenuItem  MenuItem[]
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  title     String   @db.VarChar(255)
+  message   String
+  isRead    Boolean  @default(false)
+  type      String   @default("general") @db.VarChar(50)
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  updatedAt DateTime @default(now()) @db.Timestamp(6)
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  menuItemId Int
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now()) @db.Timestamp(6)
+  updatedAt  DateTime @default(now()) @db.Timestamp(6)
+  User       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  MenuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+}
