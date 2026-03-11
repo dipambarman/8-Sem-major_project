@@ -1,0 +1,17 @@
+# Expo deployment configuration for mobile app
+deploy:
+  platform: expo
+  channel: production
+  release-channel: production
+  
+build:
+  android:
+    buildType: apk
+    releaseChannel: production
+  ios:
+    simulator: false
+    releaseChannel: production
+
+environment:
+  API_BASE_URL: https://api.smart-canteen.com
+  SOCKET_URL: wss://socket.smart-canteen.com

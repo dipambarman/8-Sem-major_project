@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "Smart Canteen",
+    "slug": "smart-canteen-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.smartcanteen.app"
+    },
+    "android": {
+      "package": "com.smartcanteen.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Smart Canteen to access your camera for QR code scanning."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#ffffff"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "newArchEnabled": false
+          },
+          "ios": {
+            "newArchEnabled": false
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "EXPO_PUBLIC_API_URL": "http://localhost:3000",
+      "eas": {
+        "projectId": "8d846a04-cbfd-4fdf-b10a-bb6c17169975"
+      }
+    },
+    "scheme": "smartcanteen"
+  }
+}
