@@ -1,4 +1,4 @@
-import { prisma } from '../models/index.js';
+import prisma from '../utils/database.js';
 
 // Get user notifications
 export const getNotifications = async (req, res) => {

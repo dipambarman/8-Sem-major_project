@@ -1,4 +1,4 @@
-import { prisma } from '../models/index.js';
+import prisma from '../utils/database.js';
 
 // Add a review
 export const addReview = async (req, res) => {

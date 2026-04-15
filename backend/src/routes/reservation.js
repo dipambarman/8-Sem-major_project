@@ -1,19 +1,23 @@
 import express from 'express';
-const router = express.Router();
 import reservationController from '../controllers/reservationController.js';
-import { authenticate as authenticateUser, authenticate as authenticateVendor, authorizeRoles } from '../middleware/authMiddleware.js';
+import { authenticate, authenticateVendor } from '../middleware/authMiddleware.js';
 import ValidationMiddleware from '../middleware/validationMiddleware.js';
 
-// User routes
-router.post('/', authenticateUser, ValidationMiddleware.validateReservation, reservationController.createReservation);
-router.get('/my-reservations', authenticateUser, reservationController.getUserReservations);
-router.put('/:reservationId/cancel', authenticateUser, reservationController.cancelReservation);
+const router = express.Router();
 
-// Vendor routes
+// ─── PUBLIC ROUTES ────────────────────────────────────────────────────────
+
+router.get('/availability/:vendorId', reservationController.checkAvailability);
+
+// ─── USER ROUTES ──────────────────────────────────────────────────────────
+
+router.post('/', authenticate, ValidationMiddleware.validateReservation, reservationController.createReservation);
+router.get('/my-reservations', authenticate, reservationController.getUserReservations);
+router.put('/:reservationId/cancel', authenticate, reservationController.cancelReservation);
+
+// ─── VENDOR ROUTES ────────────────────────────────────────────────────────
+
 router.get('/vendor', authenticateVendor, reservationController.getVendorReservations);
 router.put('/:reservationId/status', authenticateVendor, reservationController.updateReservationStatus);
-
-// Public routes
-router.get('/availability/:vendorId', reservationController.checkAvailability);
 
 export default router;

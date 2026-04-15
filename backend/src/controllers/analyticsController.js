@@ -1,4 +1,4 @@
-import { prisma } from '../models/index.js';
+import prisma from '../utils/database.js';
 
 // Get Dashboard Analytics
 export const getDashboardAnalytics = async (req, res) => {

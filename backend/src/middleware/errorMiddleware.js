@@ -1,108 +1,76 @@
+/**
+ * Central error handling middleware.
+ */
 class ErrorMiddleware {
-  // Global error handler
-  static globalErrorHandler(err, req, res, next) {
-    let error = { ...err };
-    error.message = err.message;
+  /**
+   * Global error handler — catches all unhandled errors from routes.
+   */
+  static globalErrorHandler(err, req, res, _next) {
+    let statusCode = err.statusCode || 500;
+    let message = err.message || 'Internal Server Error';
 
     console.error('🚨 Error:', err);
 
-    // Mongoose bad ObjectId
-    if (err.name === 'CastError') {
-      const message = 'Resource not found';
-      error = { message, statusCode: 404 };
+    // Prisma known errors
+    if (err.code === 'P2002') {
+      statusCode = 409;
+      message = 'A record with this value already exists';
     }
 
-    // Mongoose duplicate key
-    if (err.code === 11000) {
-      const message = 'Duplicate field value entered';
-      error = { message, statusCode: 400 };
-    }
-
-    // Mongoose validation error
-    if (err.name === 'ValidationError') {
-      const message = Object.values(err.errors).map(val => val.message).join(', ');
-      error = { message, statusCode: 400 };
+    if (err.code === 'P2025') {
+      statusCode = 404;
+      message = 'Record not found';
     }
 
     // JWT errors
     if (err.name === 'JsonWebTokenError') {
-      const message = 'Invalid token';
-      error = { message, statusCode: 401 };
+      statusCode = 401;
+      message = 'Invalid token';
     }
 
     if (err.name === 'TokenExpiredError') {
-      const message = 'Token expired';
-      error = { message, statusCode: 401 };
+      statusCode = 401;
+      message = 'Token expired';
     }
 
-    // Sequelize errors
-    if (err.name === 'SequelizeValidationError') {
-      const message = err.errors.map(e => e.message).join(', ');
-      error = { message, statusCode: 400 };
+    // Validation errors
+    if (err.name === 'ValidationError') {
+      statusCode = 400;
+      message = err.message;
     }
 
-    if (err.name === 'SequelizeUniqueConstraintError') {
-      const message = 'Duplicate entry';
-      error = { message, statusCode: 400 };
-    }
-
-    // File upload errors
-    if (err.code === 'MULTER_ERROR') {
-      const message = 'File upload error';
-      error = { message, statusCode: 400 };
-    }
-
-    // Rate limiting errors
+    // Request entity too large
     if (err.type === 'entity.too.large') {
-      const message = 'Request entity too large';
-      error = { message, statusCode: 413 };
+      statusCode = 413;
+      message = 'Request entity too large';
     }
 
-    res.status(error.statusCode || 500).json({
+    res.status(statusCode).json({
       success: false,
-      error: error.message || 'Server Error',
+      error: message,
       ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
     });
   }
 
-  // 404 handler
-  static notFoundHandler(req, res, next) {
-    const message = `Route ${req.originalUrl} not found`;
-    
+  /**
+   * 404 handler — catches requests to undefined routes.
+   */
+  static notFoundHandler(req, res, _next) {
     res.status(404).json({
       success: false,
-      error: message
+      error: `Route ${req.originalUrl} not found`
     });
   }
 
-  // Async error wrapper
+  /**
+   * Wraps an async route handler to automatically catch errors.
+   * Usage: router.get('/path', asyncHandler(controller.method))
+   */
   static asyncHandler(fn) {
     return (req, res, next) => {
       Promise.resolve(fn(req, res, next)).catch(next);
     };
   }
-
-  // Database connection error handler
-  static databaseErrorHandler(err) {
-    console.error('🔴 Database connection error:', err);
-    
-    if (err.name === 'SequelizeConnectionError') {
-      console.error('❌ Failed to connect to database');
-      process.exit(1);
-    }
-  }
-
-  // Unhandled promise rejection handler
-  static unhandledRejectionHandler(err, promise) {
-    console.error('🔴 Unhandled Promise Rejection:', err);
-    process.exit(1);
-  }
-
-  // Uncaught exception handler
-  static uncaughtExceptionHandler(err) {
-    console.error('🔴 Uncaught Exception:', err);
-    process.exit(1);
-  }
 }
 
-module.exports = ErrorMiddleware;
+export default ErrorMiddleware;

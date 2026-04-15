@@ -1,4 +1,12 @@
-import prisma from '../../prisma/prisma.config.js';
+import { PrismaClient } from '@prisma/client';
+
+/**
+ * Singleton PrismaClient instance.
+ * All modules MUST import prisma from this file to avoid multiple connections.
+ */
+const prisma = new PrismaClient({
+  log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
+});
 
 /**
  * Delay helper function for retries.
@@ -8,34 +16,31 @@ import prisma from '../../prisma/prisma.config.js';
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
- * Tests the Neon database connection and logs details.
- * Includes configurable retries and timeout.
+ * Tests the database connection with retries.
  * @param {number} retries Number of retry attempts (default 3).
  * @param {number} timeout Timeout per attempt in ms (default 3000).
- * @returns {Promise<boolean>} Returns true if connection succeeds.
- * @throws Will throw error if connection fails after retries.
+ * @returns {Promise<boolean>}
  */
 export const testConnection = async (retries = 3, timeout = 3000) => {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      console.log(`🔌 Testing Neon database connection... (Attempt ${attempt}/${retries})`);
+      console.log(`🔌 Testing database connection... (Attempt ${attempt}/${retries})`);
+
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Connection attempt timed out')), timeout)
       );
 
-      // Race connect promise against timeout promise
       await Promise.race([prisma.$connect(), timeoutPromise]);
 
-      // Test query to get server version and current time
       const [result] = await prisma.$queryRaw`SELECT version(), now() as current_time`;
-      console.log('✅ Connected to Neon PostgreSQL successfully');
+      console.log('✅ Connected to PostgreSQL successfully');
       console.log('📊 Database info:', result);
       return true;
     } catch (error) {
-      console.error(`❌ Failed to connect to Neon database (Attempt ${attempt}):`, error.message || error);
+      console.error(`❌ Connection failed (Attempt ${attempt}):`, error.message || error);
       if (attempt < retries) {
         console.log('⏳ Retrying connection...');
-        await delay(1000); // wait 1 second before retry
+        await delay(1000);
       } else {
         console.error('❌ All connection attempts failed.');
         throw error;
@@ -46,7 +51,6 @@ export const testConnection = async (retries = 3, timeout = 3000) => {
 
 /**
  * Gracefully disconnects Prisma client from the database.
- * @returns {Promise<void>}
  */
 export const disconnectDB = async () => {
   try {
@@ -57,9 +61,7 @@ export const disconnectDB = async () => {
   }
 };
 
-/**
- * Utility method to setup graceful shutdown on process signals.
- */
+// Setup graceful shutdown handlers
 const setupGracefulShutdown = () => {
   const gracefulShutdown = async () => {
     try {
@@ -73,7 +75,6 @@ const setupGracefulShutdown = () => {
   process.on('SIGTERM', gracefulShutdown);
 };
 
-// Initialize graceful shutdown handlers
 setupGracefulShutdown();
 
 export default prisma;

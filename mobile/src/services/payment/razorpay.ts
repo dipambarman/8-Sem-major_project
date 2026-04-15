@@ -24,12 +24,20 @@ export interface PaymentOptions {
   };
 }
 
-export const initiatePayment = async (options: PaymentOptions) => {
+export interface PaymentResult {
+  success: boolean;
+  paymentId?: string;
+  orderId?: string;
+  signature?: string;
+  error?: string;
+}
+
+export const initiatePayment = async (options: PaymentOptions): Promise<PaymentResult> => {
   // Check for Expo Go environment OR if Razorpay SDK is not available
   const isExpoGo = Constants.appOwnership === 'expo' || !RazorpayCheckout;
 
   if (isExpoGo) {
-    return new Promise((resolve) => {
+    return new Promise<PaymentResult>((resolve) => {
       Alert.alert(
         'Expo Go Detected',
         'Native Razorpay SDK is not supported in Expo Go.\n\nSimulating a successful payment for testing UI flow.\n\n(Backend verification may fail without real signature)',

@@ -7,92 +7,261 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model MenuItem {
-  id          Int      @id @default(autoincrement())
-  name        String   @db.VarChar(255)
-  description String?
-  price       Float
-  vendorid    Int
-  isavailable Boolean  @default(true)
-  category    String?  @db.VarChar(255)
-  createdat   DateTime @default(now()) @db.Timestamp(6)
-  updatedat   DateTime @default(now()) @db.Timestamp(6)
-  Vendor      Vendor   @relation(fields: [vendorid], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_vendor")
-  Order       Order[]
-  Review      Review[]
+// ─── ENUMS ──────────────────────────────────────────────────────────────────
+
+enum UserType {
+  REGULAR
+  PREMIUM
+  ADMIN
 }
 
-model Order {
-  id         Int      @id @default(autoincrement())
-  userid     Int
-  menuitemid Int
-  quantity   Int
-  status     String   @db.VarChar(50)
-  totalprice Float
-  orderedat  DateTime @default(now()) @db.Timestamp(6)
-  updatedat  DateTime @default(now()) @db.Timestamp(6)
-  paymentid  Int?
-  MenuItem   MenuItem @relation(fields: [menuitemid], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_menuitem")
-  User       User     @relation(fields: [userid], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user")
-  Payment    Payment?
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  COMPLETED
+  CANCELLED
 }
 
-model Payment {
-  id          Int       @id @default(autoincrement())
-  orderid     Int       @unique
-  amount      Float
-  paymentmode String    @db.VarChar(50)
-  status      String    @db.VarChar(50)
-  paidat      DateTime? @db.Timestamp(6)
-  createdat   DateTime  @default(now()) @db.Timestamp(6)
-  Order       Order     @relation(fields: [orderid], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_order")
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
 }
 
-model Reservation {
-  id             Int      @id @default(autoincrement())
-  userid         Int
-  reservedat     DateTime @db.Timestamp(6)
-  numberofpeople Int
-  status         String   @db.VarChar(50)
-  createdat      DateTime @default(now()) @db.Timestamp(6)
-  updatedat      DateTime @default(now()) @db.Timestamp(6)
-  User           User     @relation(fields: [userid], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user")
+enum PaymentMethod {
+  WALLET
+  RAZORPAY
+  SMARTPASS
 }
+
+enum PaymentType {
+  ORDER_PAYMENT
+  WALLET_TOPUP
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum SmartPassStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum SmartPassTier {
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+}
+
+// ─── MODELS ─────────────────────────────────────────────────────────────────
 
 model User {
-  id            Int           @id @default(autoincrement())
-  email         String        @unique @db.VarChar(255)
-  passwordHash  String        @db.VarChar(255)
-  fullName      String        @db.VarChar(255)
-  phone         String        @db.VarChar(20)
-  userType      String        @default("regular") @db.VarChar(50)
-  createdAt     DateTime      @default(now()) @db.Timestamp(6)
-  updatedAt     DateTime      @default(now()) @db.Timestamp(6)
-  Order         Order[]
-  Reservation   Reservation[]
-  Wallet        Wallet?
-  Notification  Notification[]
-  Review        Review[]
-}
+  id            Int                @id @default(autoincrement())
+  email         String             @unique @db.VarChar(255)
+  passwordHash  String             @db.VarChar(255)
+  fullName      String             @db.VarChar(255)
+  phone         String             @db.VarChar(20)
+  userType      UserType           @default(REGULAR)
+  isActive      Boolean            @default(true)
+  emailVerified Boolean            @default(false)
+  createdAt     DateTime           @default(now()) @db.Timestamp(6)
+  updatedAt     DateTime           @updatedAt @db.Timestamp(6)
 
-model Wallet {
-  id        Int     @id @default(autoincrement())
-  userId    Int     @unique
-  balance   Float   @default(0.00)
-  createdAt DateTime @default(now()) @db.Timestamp(6)
-  updatedAt DateTime @default(now()) @db.Timestamp(6)
-  User      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Relations
+  orders        Order[]
+  reservations  Reservation[]
+  wallet        Wallet?
+  notifications Notification[]
+  reviews       Review[]
+  smartPass     SmartPass?
+  payments      Payment[]
+
+  @@map("users")
 }
 
 model Vendor {
-  id        Int        @id @default(autoincrement())
-  name      String     @db.VarChar(255)
-  email     String     @unique @db.VarChar(255)
-  password  String     @db.VarChar(255)
-  isactive  Boolean    @default(true)
-  createdat DateTime   @default(now()) @db.Timestamp(6)
-  updatedat DateTime   @default(now()) @db.Timestamp(6)
-  MenuItem  MenuItem[]
+  id             Int        @id @default(autoincrement())
+  name           String     @db.VarChar(255)
+  description    String?
+  email          String     @unique @db.VarChar(255)
+  phone          String?    @db.VarChar(20)
+  password       String     @db.VarChar(255)
+  address        String?
+  operatingHours Json?
+  cuisineType    Json?
+  isActive       Boolean    @default(true)
+  rating         Float      @default(0)
+  licenseNumber  String?    @db.VarChar(100)
+  createdAt      DateTime   @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime   @updatedAt @db.Timestamp(6)
+
+  // Relations
+  menuItems    MenuItem[]
+  orders       Order[]
+  reservations Reservation[]
+
+  @@map("vendors")
+}
+
+model MenuItem {
+  id              Int      @id @default(autoincrement())
+  name            String   @db.VarChar(255)
+  description     String?
+  price           Float
+  preparationTime Int      @default(15)
+  category        String   @db.VarChar(100)
+  imageUrl        String?
+  isAvailable     Boolean  @default(true)
+  isFeatured      Boolean  @default(false)
+  isExpress       Boolean  @default(false)
+  rating          Float    @default(0)
+  vendorId        Int
+  createdAt       DateTime @default(now()) @db.Timestamp(6)
+  updatedAt       DateTime @updatedAt @db.Timestamp(6)
+
+  // Relations
+  vendor     Vendor      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+  reviews    Review[]
+
+  @@map("menu_items")
+}
+
+model Order {
+  id                  Int           @id @default(autoincrement())
+  orderNumber         String        @unique @db.VarChar(50)
+  userId              Int
+  vendorId            Int
+  orderType           String        @default("pickup") @db.VarChar(20)
+  status              OrderStatus   @default(PENDING)
+  totalAmount         Float
+  paymentMethod       String?       @db.VarChar(20)
+  paymentStatus       PaymentStatus @default(PENDING)
+  slotTime            DateTime?     @db.Timestamp(6)
+  specialInstructions String?
+  qrCode              String?
+  estimatedTime       Int?
+  smartPassDiscount   Float         @default(0)
+  createdAt           DateTime      @default(now()) @db.Timestamp(6)
+  updatedAt           DateTime      @updatedAt @db.Timestamp(6)
+
+  // Relations
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vendor   Vendor      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  items    OrderItem[]
+  payments Payment[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id                  Int    @id @default(autoincrement())
+  orderId             Int
+  menuItemId          Int
+  quantity            Int
+  price               Float
+  specialInstructions String?
+
+  // Relations
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@map("order_items")
+}
+
+model Payment {
+  id                  Int           @id @default(autoincrement())
+  userId              Int
+  orderId             Int?
+  amount              Float
+  paymentMethod       PaymentMethod @default(RAZORPAY)
+  paymentType         PaymentType   @default(ORDER_PAYMENT)
+  status              PaymentStatus @default(PENDING)
+  razorpayOrderId     String?       @db.VarChar(255)
+  razorpayPaymentId   String?       @db.VarChar(255)
+  razorpaySignature   String?
+  paymentTime         DateTime?     @db.Timestamp(6)
+  paymentResponse     Json?
+  refundAmount        Float?
+  refundTime          DateTime?     @db.Timestamp(6)
+  refundTransactionId String?       @db.VarChar(255)
+  createdAt           DateTime      @default(now()) @db.Timestamp(6)
+  updatedAt           DateTime      @updatedAt @db.Timestamp(6)
+
+  // Relations
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@map("payments")
+}
+
+model Wallet {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  balance   Float    @default(0.00)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  updatedAt DateTime @updatedAt @db.Timestamp(6)
+
+  // Relations
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions WalletTransaction[]
+
+  @@map("wallets")
+}
+
+model WalletTransaction {
+  id          Int             @id @default(autoincrement())
+  walletId    Int
+  type        TransactionType
+  amount      Float
+  description String?         @db.VarChar(255)
+  referenceId String?         @db.VarChar(255)
+  createdAt   DateTime        @default(now()) @db.Timestamp(6)
+
+  // Relations
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@map("wallet_transactions")
+}
+
+model Reservation {
+  id                  Int               @id @default(autoincrement())
+  userId              Int
+  vendorId            Int
+  reservationTime     DateTime          @db.Timestamp(6)
+  partySize           Int
+  diningArea          String            @default("main") @db.VarChar(50)
+  status              ReservationStatus @default(PENDING)
+  specialRequests     String?
+  contactPhone        String?           @db.VarChar(20)
+  tableNumber         Int?
+  cancelReason        String?
+  actualCheckInTime   DateTime?         @db.Timestamp(6)
+  actualCheckOutTime  DateTime?         @db.Timestamp(6)
+  createdAt           DateTime          @default(now()) @db.Timestamp(6)
+  updatedAt           DateTime          @updatedAt @db.Timestamp(6)
+
+  // Relations
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@map("reservations")
 }
 
 model Notification {
@@ -103,8 +272,12 @@ model Notification {
   isRead    Boolean  @default(false)
   type      String   @default("general") @db.VarChar(50)
   createdAt DateTime @default(now()) @db.Timestamp(6)
-  updatedAt DateTime @default(now()) @db.Timestamp(6)
-  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt DateTime @updatedAt @db.Timestamp(6)
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
 }
 
 model Review {
@@ -114,7 +287,29 @@ model Review {
   rating     Int
   comment    String?
   createdAt  DateTime @default(now()) @db.Timestamp(6)
-  updatedAt  DateTime @default(now()) @db.Timestamp(6)
-  User       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  MenuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  updatedAt  DateTime @updatedAt @db.Timestamp(6)
+
+  // Relations
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
+
+model SmartPass {
+  id              Int             @id @default(autoincrement())
+  userId          Int             @unique
+  tier            SmartPassTier   @default(SILVER)
+  status          SmartPassStatus @default(PENDING)
+  cardNumber      String?         @unique @db.VarChar(50)
+  discountPercent Float           @default(5)
+  activatedAt     DateTime?       @db.Timestamp(6)
+  expiresAt       DateTime?       @db.Timestamp(6)
+  createdAt       DateTime        @default(now()) @db.Timestamp(6)
+  updatedAt       DateTime        @updatedAt @db.Timestamp(6)
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("smart_passes")
 }

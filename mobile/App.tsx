@@ -13,7 +13,7 @@ import { Provider, useDispatch } from 'react-redux';
 import * as SplashScreen from 'expo-splash-screen';
 
 // Redux store (NO PERSISTOR)
-import { store } from './src/store/store';
+import { store, AppDispatch } from './src/store/store';
 import { initializeAuth } from './src/store/slices/authSlice';
 
 // Navigation
@@ -39,7 +39,7 @@ LogBox.ignoreLogs([
 SplashScreen.preventAutoHideAsync();
 
 const AppContent: React.FC = () => {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
     console.log('🔵 AppContent mounted - initializing auth');

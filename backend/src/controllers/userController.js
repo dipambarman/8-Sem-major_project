@@ -1,4 +1,4 @@
-import { prisma } from '../models/index.js';
+import prisma from '../utils/database.js';
 import bcrypt from 'bcryptjs';
 
 // Get user profile

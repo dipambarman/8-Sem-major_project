@@ -8,10 +8,12 @@ import ValidationMiddleware from '../middleware/validationMiddleware.js';
 
 const router = express.Router();
 
-// Auth
+// ─── AUTH ─────────────────────────────────────────────────────────────────
+
 router.post('/auth/login', vendorLogin);
 
-// Protect all following routes
+// ─── PROTECTED ROUTES (All below require vendor auth) ─────────────────────
+
 router.use(authenticateVendor);
 
 // Dashboard

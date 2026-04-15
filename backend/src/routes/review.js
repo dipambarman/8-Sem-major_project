@@ -1,19 +1,24 @@
 import express from 'express';
-const router = express.Router();
-import { authenticateUser, authorizeRoles } from '../middleware/authMiddleware.js';
+import { authenticate, authorizeRoles } from '../middleware/authMiddleware.js';
+import ValidationMiddleware from '../middleware/validationMiddleware.js';
 import {
   addReview,
   getMenuItemReviews,
   deleteReview
 } from '../controllers/reviewController.js';
 
-// Get reviews for a menu item (Public)
+const router = express.Router();
+
+// ─── PUBLIC ROUTES ────────────────────────────────────────────────────────
+
 router.get('/menu-item/:menuItemId', getMenuItemReviews);
 
-// Add a review (Authenticated User)
-router.post('/', authenticateUser, addReview);
+// ─── USER ROUTES ──────────────────────────────────────────────────────────
 
-// Delete a review (Admin only)
-router.delete('/:reviewId', authenticateUser, authorizeRoles(['admin']), deleteReview);
+router.post('/', authenticate, ValidationMiddleware.validateReview, addReview);
+
+// ─── ADMIN ROUTES ─────────────────────────────────────────────────────────
+
+router.delete('/:reviewId', authenticate, authorizeRoles(['admin']), deleteReview);
 
 export default router;

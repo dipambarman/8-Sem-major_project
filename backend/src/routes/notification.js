@@ -1,6 +1,5 @@
 import express from 'express';
-const router = express.Router();
-import { authenticateUser, authorizeRoles } from '../middleware/authMiddleware.js';
+import { authenticate, authorizeRoles } from '../middleware/authMiddleware.js';
 import {
   getNotifications,
   markAsRead,
@@ -8,14 +7,16 @@ import {
   broadcastNotification
 } from '../controllers/notificationController.js';
 
-// User notification routes
-router.get('/', authenticateUser, getNotifications);
+const router = express.Router();
 
-router.put('/read-all', authenticateUser, markAllAsRead);
+// ─── USER ROUTES ──────────────────────────────────────────────────────────
 
-router.put('/:notificationId/read', authenticateUser, markAsRead);
+router.get('/', authenticate, getNotifications);
+router.put('/read-all', authenticate, markAllAsRead);
+router.put('/:notificationId/read', authenticate, markAsRead);
 
-// Admin routes
-router.post('/broadcast', authenticateUser, authorizeRoles(['admin']), broadcastNotification);
+// ─── ADMIN ROUTES ─────────────────────────────────────────────────────────
+
+router.post('/broadcast', authenticate, authorizeRoles(['admin']), broadcastNotification);
 
 export default router;

@@ -11,10 +11,11 @@ import reviewRoutes from './review.js';
 import analyticsRoutes from './analytics.js';
 import vendorRoutes from './vendor.js';
 import adminRoutes from './admin.js';
+import smartPassRoutes from './smartpass.js';
 
 const router = express.Router();
 
-// Health check endpoint
+// Health check
 router.get('/health', (req, res) => {
   res.json({
     success: true,
@@ -23,7 +24,8 @@ router.get('/health', (req, res) => {
   });
 });
 
-// Route registrations
+// ─── ROUTE REGISTRATIONS ──────────────────────────────────────────────────
+
 router.use('/auth', authRoutes);
 router.use('/orders', orderRoutes);
 router.use('/menu', menuRoutes);
@@ -36,5 +38,6 @@ router.use('/reviews', reviewRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/vendor', vendorRoutes);
 router.use('/admin', adminRoutes);
+router.use('/smartpass', smartPassRoutes);
 
 export default router;

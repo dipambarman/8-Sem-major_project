@@ -1,16 +1,19 @@
 import express from 'express';
-const router = express.Router();
 import paymentController from '../controllers/paymentController.js';
-import { authenticateUser, authorizeRoles } from '../middleware/authMiddleware.js';
+import { authenticate, authorizeRoles } from '../middleware/authMiddleware.js';
 
-// User routes
-router.post('/razorpay/create-order', authenticateUser, (req, res) => paymentController.createRazorpayOrder(req, res));
-router.post('/razorpay/verify', authenticateUser, (req, res) => paymentController.verifyRazorpayPayment(req, res));
-router.get('/history', authenticateUser, (req, res) => paymentController.getPaymentHistory(req, res));
-router.post('/refund', authenticateUser, (req, res) => paymentController.initiateRefund(req, res));
+const router = express.Router();
 
-// Admin routes
-router.get('/all', authenticateUser, authorizeRoles(['admin']), (req, res) => paymentController.getAllPayments(req, res));
-router.get('/analytics', authenticateUser, authorizeRoles(['admin']), (req, res) => paymentController.getPaymentAnalytics(req, res));
+// ─── USER ROUTES ──────────────────────────────────────────────────────────
+
+router.post('/razorpay/create-order', authenticate, paymentController.createRazorpayOrder.bind(paymentController));
+router.post('/razorpay/verify', authenticate, paymentController.verifyRazorpayPayment.bind(paymentController));
+router.get('/history', authenticate, paymentController.getPaymentHistory.bind(paymentController));
+router.post('/refund', authenticate, paymentController.initiateRefund.bind(paymentController));
+
+// ─── ADMIN ROUTES ─────────────────────────────────────────────────────────
+
+router.get('/all', authenticate, authorizeRoles(['admin']), paymentController.getAllPayments.bind(paymentController));
+router.get('/analytics', authenticate, authorizeRoles(['admin']), paymentController.getPaymentAnalytics.bind(paymentController));
 
 export default router;

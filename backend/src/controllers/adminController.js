@@ -1,4 +1,4 @@
-import { prisma } from '../models/index.js';
+import prisma from '../utils/database.js';
 
 const getModelName = (resource) => {
   const map = {
@@ -6,9 +6,15 @@ const getModelName = (resource) => {
     orders: 'order',
     vendors: 'vendor',
     menu: 'menuItem',
-    transactions: 'payment', // mapping transactions to payment or wallet
+    'menu-items': 'menuItem',
+    transactions: 'payment',
+    payments: 'payment',
     reservations: 'reservation',
-    reviews: 'review'
+    reviews: 'review',
+    notifications: 'notification',
+    wallets: 'wallet',
+    'smart-passes': 'smartPass',
+    smartpass: 'smartPass'
   };
   return map[resource] || resource;
 };
@@ -17,11 +23,17 @@ const getModelName = (resource) => {
 const getIncludes = (modelName) => {
   switch (modelName) {
     case 'order':
-      return { User: true, MenuItem: true, Payment: true };
+      return { user: true, vendor: true, items: { include: { menuItem: true } }, payments: true };
     case 'menuItem':
-      return { Vendor: true };
+      return { vendor: true };
     case 'reservation':
-      return { User: true };
+      return { user: true, vendor: true };
+    case 'smartPass':
+      return { user: { select: { id: true, fullName: true, email: true } } };
+    case 'review':
+      return { user: true, menuItem: true };
+    case 'payment':
+      return { user: true, order: true };
     default:
       return undefined;
   }

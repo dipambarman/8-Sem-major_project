@@ -9,7 +9,7 @@ const Stack = createNativeStackNavigator();
 
 const CartStackNavigator: React.FC = () => {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator id="CartStack" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Cart" component={CartScreen} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
       <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
