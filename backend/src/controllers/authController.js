@@ -1,6 +1,8 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import prisma from '../utils/database.js';
+import { JWT_SECRET, JWT_EXPIRY } from '../config/jwt.js';
 
 /**
  * POST /api/auth/register
@@ -38,8 +40,8 @@ export const register = async (req, res) => {
     // Generate JWT
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRY }
     );
 
     res.status(201).json({
@@ -97,8 +99,8 @@ export const login = async (req, res) => {
 
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRY }
     );
 
     res.json({
@@ -151,8 +153,8 @@ export const adminLogin = async (req, res) => {
 
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: 'admin' },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRY }
     );
 
     res.json({
@@ -210,24 +212,84 @@ export const forgotPassword = async (req, res) => {
     }
 
     const user = await prisma.user.findUnique({ where: { email } });
+
+    // Always return success to prevent email enumeration
     if (!user) {
-      // Don't reveal whether the email exists — security best practice
       return res.json({
         success: true,
         message: 'If an account with that email exists, password reset instructions have been sent.'
       });
     }
 
-    // TODO: Implement actual email sending
-    // await sendPasswordResetEmail(user.email, generateResetToken(user.id));
+    // Generate a secure reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
 
+    // Create a short-lived JWT containing the reset token hash & userId
+    const resetJwt = jwt.sign(
+      { userId: user.id, resetTokenHash },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    // In a production app, send this link via email:
+    // const resetUrl = `${FRONTEND_URL}/reset-password?token=${resetJwt}`;
+    // await emailService.sendPasswordResetEmail(user.email, resetUrl);
+
+    // For development, return the token in the response
     res.json({
       success: true,
-      message: 'If an account with that email exists, password reset instructions have been sent.'
+      message: 'If an account with that email exists, password reset instructions have been sent.',
+      ...(process.env.NODE_ENV === 'development' && { resetToken: resetJwt })
     });
   } catch (error) {
     console.error('Forgot password error:', error);
     res.status(500).json({ success: false, error: 'Failed to process password reset request' });
+  }
+};
+
+/**
+ * POST /api/auth/reset-password
+ * Reset password using the token from forgotPassword.
+ */
+export const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ success: false, error: 'Token and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 6 characters' });
+    }
+
+    // Verify the reset JWT
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      return res.status(400).json({ success: false, error: 'Invalid or expired reset token' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash }
+    });
+
+    res.json({
+      success: true,
+      message: 'Password has been reset successfully. You can now login with your new password.'
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ success: false, error: 'Failed to reset password' });
   }
 };
 

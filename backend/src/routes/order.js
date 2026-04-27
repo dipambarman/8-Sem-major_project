@@ -9,6 +9,7 @@ const router = express.Router();
 
 router.post('/', authenticate, ValidationMiddleware.validateOrderCreation, orderController.createOrder);
 router.get('/my-orders', authenticate, orderController.getUserOrders);
+router.get('/:orderId', authenticate, orderController.getOrderDetails);
 router.put('/:orderId/cancel', authenticate, orderController.cancelOrder);
 
 // ─── QR CODE ROUTES ───────────────────────────────────────────────────────
@@ -18,6 +19,7 @@ router.get('/:orderId/qr', authenticate, orderController.getOrderQRCode);
 
 // ─── VENDOR ROUTES ────────────────────────────────────────────────────────
 
+router.get('/vendor/orders', authenticateVendor, orderController.getVendorOrders);
 router.put('/:orderId/status', authenticateVendor, ValidationMiddleware.validateStatusUpdate, orderController.updateOrderStatus);
 
 export default router;

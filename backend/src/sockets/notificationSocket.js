@@ -1,4 +1,5 @@
-import { prisma } from '../models/index.js';
+import prisma from '../utils/database.js';
+import notificationService from '../services/notificationService.js';
 
 class NotificationSocket {
   constructor(io) {
@@ -16,16 +17,13 @@ class NotificationSocket {
         try {
           const { userId, userType, token } = data;
           
-          // Verify user authentication (simplified)
           if (userId && token) {
             socket.userId = userId;
             socket.userType = userType;
             
-            // Join user-specific notification room
             socket.join(`user_${userId}`);
-            socket.join(`${userType}_notifications`); // 'user_notifications' or 'vendor_notifications'
+            socket.join(`${userType}_notifications`);
             
-            // Store socket reference for direct messaging
             this.userSockets.set(userId, socket);
             
             console.log(`👤 User ${userId} authenticated and joined notification rooms`);
@@ -51,8 +49,7 @@ class NotificationSocket {
       socket.on('markNotificationRead', async (data) => {
         try {
           const { notificationId } = data;
-          // Update notification status in database
-          await this.markNotificationAsRead(notificationId, socket.userId);
+          await notificationService.markAsRead(parseInt(notificationId), socket.userId);
           
           socket.emit('notificationMarkedRead', {
             notificationId,
@@ -67,32 +64,18 @@ class NotificationSocket {
       socket.on('getNotificationHistory', async (data) => {
         try {
           const { page = 1, limit = 20 } = data;
-          const notifications = await this.getUserNotificationHistory(
+          const result = await notificationService.getUserNotifications(
             socket.userId, 
             page, 
             limit
           );
           
           socket.emit('notificationHistory', {
-            notifications,
-            page,
+            ...result,
             success: true
           });
         } catch (error) {
           console.error('Get notification history error:', error);
-        }
-      });
-
-      // Update notification preferences
-      socket.on('updateNotificationPreferences', async (data) => {
-        try {
-          await this.updateUserNotificationPreferences(socket.userId, data);
-          socket.emit('notificationPreferencesUpdated', {
-            success: true,
-            preferences: data
-          });
-        } catch (error) {
-          console.error('Update notification preferences error:', error);
         }
       });
 
@@ -125,8 +108,7 @@ class NotificationSocket {
   // Send pending notifications when user connects
   async sendPendingNotifications(userId) {
     try {
-      // Get unread notifications from database
-      const pendingNotifications = await this.getUserPendingNotifications(userId);
+      const pendingNotifications = await notificationService.getUnreadNotifications(userId);
       
       if (pendingNotifications.length > 0) {
         this.io.to(`user_${userId}`).emit('pendingNotifications', {
@@ -157,11 +139,14 @@ class NotificationSocket {
       priority: this.getNotificationPriority(notification.status)
     };
 
-    // Send to specific user
     this.io.to(`user_${userId}`).emit('notification', orderNotification);
     
-    // Save to database for persistence
-    this.saveNotificationToDatabase(userId, orderNotification);
+    // Persist to database
+    notificationService.createNotification(userId, {
+      title: orderNotification.title,
+      message: notification.message,
+      type: 'order',
+    }).catch(err => console.error('Failed to persist order notification:', err));
     
     console.log(`📦 Order notification sent to user ${userId}:`, orderNotification.title);
   }
@@ -175,7 +160,6 @@ class NotificationSocket {
       message: notification.message,
       data: {
         reservationId: notification.reservationId,
-        reservationNumber: notification.reservationNumber,
         status: notification.status,
         reservationTime: notification.reservationTime,
         tableNumber: notification.tableNumber
@@ -185,11 +169,13 @@ class NotificationSocket {
       priority: this.getNotificationPriority(notification.status)
     };
 
-    // Send to specific user
     this.io.to(`user_${userId}`).emit('notification', reservationNotification);
     
-    // Save to database
-    this.saveNotificationToDatabase(userId, reservationNotification);
+    notificationService.createNotification(userId, {
+      title: reservationNotification.title,
+      message: notification.message,
+      type: 'reservation',
+    }).catch(err => console.error('Failed to persist reservation notification:', err));
     
     console.log(`🍽️ Reservation notification sent to user ${userId}:`, reservationNotification.title);
   }
@@ -212,11 +198,13 @@ class NotificationSocket {
       priority: notification.status === 'failed' ? 'high' : 'medium'
     };
 
-    // Send to specific user
     this.io.to(`user_${userId}`).emit('notification', paymentNotification);
     
-    // Save to database
-    this.saveNotificationToDatabase(userId, paymentNotification);
+    notificationService.createNotification(userId, {
+      title: paymentNotification.title,
+      message: notification.message,
+      type: 'payment',
+    }).catch(err => console.error('Failed to persist payment notification:', err));
     
     console.log(`💳 Payment notification sent to user ${userId}:`, paymentNotification.title);
   }
@@ -239,14 +227,12 @@ class NotificationSocket {
       priority: 'low'
     };
 
-    // Send to specific users or broadcast
     if (targetUsers === 'all') {
       this.io.to('user_notifications').emit('notification', promoNotification);
       console.log('📢 Promotional notification broadcast to all users');
     } else if (Array.isArray(targetUsers)) {
       targetUsers.forEach(userId => {
         this.io.to(`user_${userId}`).emit('notification', promoNotification);
-        this.saveNotificationToDatabase(userId, promoNotification);
       });
       console.log(`📢 Promotional notification sent to ${targetUsers.length} users`);
     }
@@ -268,13 +254,11 @@ class NotificationSocket {
       priority: notification.severity === 'critical' ? 'high' : 'medium'
     };
 
-    // Broadcast to all connected users
     this.io.emit('notification', systemNotification);
-    
     console.log('⚠️ System notification broadcast:', systemNotification.title);
   }
 
-  // Vendor notifications (new orders, reservation requests, etc.)
+  // Vendor notifications
   emitVendorNotification(vendorId, notification) {
     const vendorNotification = {
       id: `vendor_${Date.now()}`,
@@ -287,9 +271,7 @@ class NotificationSocket {
       priority: notification.priority || 'medium'
     };
 
-    // Send to vendor
     this.io.to(`vendor_${vendorId}`).emit('notification', vendorNotification);
-    
     console.log(`🏪 Vendor notification sent to vendor ${vendorId}:`, vendorNotification.title);
   }
 
@@ -306,9 +288,7 @@ class NotificationSocket {
       priority: notification.priority || 'medium'
     };
 
-    // Send to all admins
     this.io.to('admin_notifications').emit('notification', adminNotification);
-    
     console.log('👨‍💼 Admin notification sent:', adminNotification.title);
   }
 
@@ -352,62 +332,6 @@ class NotificationSocket {
     return 'low';
   }
 
-  // Database operations (implement based on your notification model)
-  async saveNotificationToDatabase(userId, notification) {
-    try {
-      // Save notification to database
-      // You might want to create a Notification model for this
-      console.log(`💾 Saving notification to database for user ${userId}`);
-    } catch (error) {
-      console.error('Save notification error:', error);
-    }
-  }
-
-  async getUserPendingNotifications(userId) {
-    try {
-      // Fetch unread notifications from database
-      // Return array of notifications
-      return [];
-    } catch (error) {
-      console.error('Get pending notifications error:', error);
-      return [];
-    }
-  }
-
-  async getUserNotificationHistory(userId, page, limit) {
-    try {
-      // Fetch notification history from database with pagination
-      // Return notifications with pagination info
-      return {
-        notifications: [],
-        total: 0,
-        page,
-        pages: 0
-      };
-    } catch (error) {
-      console.error('Get notification history error:', error);
-      return { notifications: [], total: 0, page: 1, pages: 0 };
-    }
-  }
-
-  async markNotificationAsRead(notificationId, userId) {
-    try {
-      // Mark notification as read in database
-      console.log(`✅ Marking notification ${notificationId} as read for user ${userId}`);
-    } catch (error) {
-      console.error('Mark notification as read error:', error);
-    }
-  }
-
-  async updateUserNotificationPreferences(userId, preferences) {
-    try {
-      // Update user notification preferences in database
-      console.log(`⚙️ Updating notification preferences for user ${userId}:`, preferences);
-    } catch (error) {
-      console.error('Update notification preferences error:', error);
-    }
-  }
-
   // Direct user messaging
   sendDirectNotification(userId, notification) {
     const userSocket = this.userSockets.get(userId);
@@ -416,8 +340,11 @@ class NotificationSocket {
       console.log(`📨 Direct notification sent to user ${userId}`);
       return true;
     } else {
-      // User not connected, save for later
-      this.saveNotificationToDatabase(userId, notification);
+      notificationService.createNotification(userId, {
+        title: notification.title || 'Notification',
+        message: notification.message || '',
+        type: notification.type || 'general',
+      }).catch(err => console.error('Failed to persist offline notification:', err));
       console.log(`📪 User ${userId} offline, notification saved for later`);
       return false;
     }

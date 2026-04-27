@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../utils/database.js';
+import { JWT_SECRET, JWT_EXPIRY } from '../config/jwt.js';
 
 /**
  * POST /api/vendor/auth/login
@@ -29,8 +30,8 @@ export const vendorLogin = async (req, res) => {
 
     const token = jwt.sign(
       { userId: vendor.id, email: vendor.email, role: 'vendor' },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRY }
     );
 
     res.json({

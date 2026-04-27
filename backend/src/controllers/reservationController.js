@@ -152,7 +152,7 @@ class ReservationController {
       const vendorId = req.vendor.id;
 
       const reservation = await prisma.reservation.findFirst({
-        where: { id: reservationId, vendorId }
+        where: { id: parseInt(reservationId), vendorId }
       });
 
       if (!reservation) {
@@ -185,7 +185,7 @@ class ReservationController {
       if (status.toUpperCase() === 'CONFIRMED') updateData.actualCheckInTime = new Date();
 
       const updatedReservation = await prisma.reservation.update({
-        where: { id: reservationId },
+        where: { id: parseInt(reservationId) },
         data: updateData
       });
 
@@ -245,7 +245,7 @@ class ReservationController {
       const userId = req.user.id;
 
       const reservation = await prisma.reservation.findFirst({
-        where: { id: reservationId, userId }
+        where: { id: parseInt(reservationId), userId }
       });
 
       if (!reservation) {
@@ -269,7 +269,7 @@ class ReservationController {
       }
 
       const updatedReservation = await prisma.reservation.update({
-        where: { id: reservationId },
+        where: { id: parseInt(reservationId) },
         data: {
           status: 'CANCELLED',
           cancelReason
@@ -305,7 +305,7 @@ class ReservationController {
 
       const reservations = await prisma.reservation.findMany({
         where: {
-          vendorId,
+          vendorId: parseInt(vendorId),
           reservationTime: {
             gte: startTime,
             lte: endTime

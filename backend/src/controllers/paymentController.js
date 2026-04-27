@@ -1,6 +1,6 @@
 import prisma from '../utils/database.js';
-import Razorpay from 'razorpay';
-import crypto from 'crypto';
+import { createRazorpayOrder, verifyPayment } from '../services/paymentService.js';
+import razorpay from '../services/paymentService.js';
 
 // Initialize Razorpay only if credentials are available
 // Moved validation to method to ensure env vars are loaded
@@ -10,13 +10,7 @@ import crypto from 'crypto';
 class PaymentController {
   // Helper to get initialized Razorpay instance
   _getRazorpayInstance() {
-    if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
-      return new Razorpay({
-        key_id: process.env.RAZORPAY_KEY_ID,
-        key_secret: process.env.RAZORPAY_KEY_SECRET,
-      });
-    }
-    return null;
+    return razorpay || null;
   }
 
   // Create Razorpay order
@@ -106,14 +100,10 @@ class PaymentController {
         throw new Error('RAZORPAY_KEY_SECRET missing');
       }
 
-      // Verify signature
-      const sign = razorpay_order_id + "|" + razorpay_payment_id;
-      const expectedSign = crypto
-        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-        .update(sign.toString())
-        .digest("hex");
+      // Verify signature using paymentService
+      const isValid = verifyPayment(razorpay_payment_id, razorpay_order_id, razorpay_signature);
 
-      if (razorpay_signature !== expectedSign) {
+      if (!isValid) {
         return res.status(400).json({
           success: false,
           error: 'Invalid payment signature'
@@ -169,7 +159,7 @@ class PaymentController {
           data: {
             paymentStatus: 'COMPLETED',
             status: 'CONFIRMED',
-            paymentId: razorpay_payment_id
+            paymentMethod: 'razorpay'
           }
         });
       }
@@ -340,7 +330,7 @@ class PaymentController {
         where: whereClause,
         include: {
           user: {
-            select: { id: true, name: true, email: true }
+            select: { id: true, fullName: true, email: true }
           },
           order: {
             select: { id: true, orderNumber: true, totalAmount: true }

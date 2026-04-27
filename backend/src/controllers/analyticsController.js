@@ -10,7 +10,7 @@ export const getDashboardAnalytics = async (req, res) => {
     // Revenue
     const revenueResult = await prisma.payment.aggregate({
       _sum: { amount: true },
-      where: { status: 'success' }
+      where: { status: 'COMPLETED' }
     });
     const totalRevenue = revenueResult._sum.amount || 0;
 
@@ -77,8 +77,8 @@ export const getDashboardAnalytics = async (req, res) => {
       const dayRevenue = await prisma.payment.aggregate({
         _sum: { amount: true },
         where: {
-          status: 'success',
-          createdat: {
+          status: 'COMPLETED',
+          createdAt: {
             gte: startOfDay,
             lte: endOfDay
           }

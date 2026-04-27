@@ -82,7 +82,7 @@ export const logoutUser = createAsyncThunk(
       if (token) {
         try {
           console.log('🔴 Calling API logout...');
-          await authApi.logout(token);
+          await authApi.logout();
           console.log('✅ API logout successful');
         } catch (apiError) {
           console.warn('⚠️ API logout failed (continuing with local logout):', apiError);

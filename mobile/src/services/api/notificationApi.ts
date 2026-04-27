@@ -1,17 +1,4 @@
-import axios from 'axios';
-import Constants from 'expo-constants';
-import { Platform } from 'react-native';
-
-const getApiBaseUrl = () => {
-  const manifestUrl = Constants.expoConfig?.hostUri;
-  if (manifestUrl) {
-    const host = manifestUrl.split(':')[0];
-    return `http://${host}:3000`;
-  }
-  return 'http://localhost:3000';
-};
-
-const API_BASE_URL = getApiBaseUrl();
+import apiClient from './apiClient';
 
 export interface Notification {
   id: number;
@@ -22,30 +9,22 @@ export interface Notification {
 }
 
 const notificationApi = {
-  getNotifications: async (token: string, page = 1, limit = 20): Promise<{ notifications: Notification[], pagination: any }> => {
-    const response = await axios.get(`${API_BASE_URL}/api/notifications?page=${page}&limit=${limit}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+  getNotifications: async (page = 1, limit = 20): Promise<{ notifications: Notification[], pagination: any }> => {
+    const response = await apiClient.get(`/api/notifications?page=${page}&limit=${limit}`);
     return response.data.data;
   },
 
-  getUnreadCount: async (token: string): Promise<number> => {
-    const response = await axios.get(`${API_BASE_URL}/api/notifications/unread-count`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+  getUnreadCount: async (): Promise<number> => {
+    const response = await apiClient.get('/api/notifications/unread-count');
     return response.data.data.unreadCount;
   },
 
-  markAsRead: async (token: string, notificationId: number): Promise<void> => {
-    await axios.put(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {}, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+  markAsRead: async (notificationId: number): Promise<void> => {
+    await apiClient.put(`/api/notifications/${notificationId}/read`);
   },
 
-  markAllAsRead: async (token: string): Promise<void> => {
-    await axios.put(`${API_BASE_URL}/api/notifications/read-all`, {}, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+  markAllAsRead: async (): Promise<void> => {
+    await apiClient.put('/api/notifications/read-all');
   }
 };
 

@@ -21,7 +21,7 @@ const NotificationsScreen = () => {
       const token = await getToken();
       if (!token) return;
 
-      const data = await notificationApi.getNotifications(token);
+      const data = await notificationApi.getNotifications();
       setNotifications(data.notifications);
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -45,7 +45,7 @@ const NotificationsScreen = () => {
       const token = await getToken();
       if (!token) return;
 
-      await notificationApi.markAsRead(token, id);
+      await notificationApi.markAsRead(id);
       setNotifications(prev => 
         prev.map(n => n.id === id ? { ...n, isRead: true } : n)
       );

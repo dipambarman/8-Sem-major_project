@@ -9,11 +9,11 @@ import React, { useEffect, useState } from 'react';
 import { LogBox, Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Provider, useDispatch } from 'react-redux';
+import { Provider, useDispatch, useSelector } from 'react-redux';
 import * as SplashScreen from 'expo-splash-screen';
 
 // Redux store (NO PERSISTOR)
-import { store, AppDispatch } from './src/store/store';
+import { store, AppDispatch, RootState } from './src/store/store';
 import { initializeAuth } from './src/store/slices/authSlice';
 
 // Navigation
@@ -41,10 +41,27 @@ SplashScreen.preventAutoHideAsync();
 const AppContent: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
 
+  const { isAuthenticated, token } = useSelector((state: RootState) => state.auth);
+
   useEffect(() => {
     console.log('🔵 AppContent mounted - initializing auth');
     dispatch(initializeAuth());
   }, [dispatch]);
+
+  // Dynamically manage socket connection based on auth state
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      console.log('🔌 Auth state changed to authenticated: initializing socket');
+      import('./src/services/socket/socketService').then(({ initializeSocket }) => {
+        initializeSocket(token);
+      });
+    } else {
+      console.log('🔌 Auth state changed to unauthenticated: disconnecting socket');
+      import('./src/services/socket/socketService').then(({ disconnectSocket }) => {
+        disconnectSocket();
+      });
+    }
+  }, [isAuthenticated, token]);
 
   return (
     <>

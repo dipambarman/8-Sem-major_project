@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import prisma from '../utils/database.js';
+import { JWT_SECRET } from '../config/jwt.js';
 
 /**
  * Authenticate user via JWT Bearer token.
@@ -16,7 +17,7 @@ export const authenticate = async (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
 
     if (decoded.role === 'vendor') {
       const vendor = await prisma.vendor.findUnique({
@@ -178,7 +179,7 @@ export const optionalAuth = async (req, res, next) => {
       return next();
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: {

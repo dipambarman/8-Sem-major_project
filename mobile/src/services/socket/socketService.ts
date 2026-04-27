@@ -1,9 +1,10 @@
 import io, { Socket } from 'socket.io-client';
+import { getApiBaseUrl } from '../api/apiClient';
 
 let socket: Socket | null = null;
 
 export const initializeSocket = (token: string) => {
-  const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || 'http://localhost:3000';
+  const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || getApiBaseUrl();
   
   socket = io(SOCKET_URL, {
     auth: {

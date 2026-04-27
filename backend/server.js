@@ -7,18 +7,14 @@ import helmet from 'helmet';
 import { testConnection } from './src/utils/database.js';
 import routes from './src/routes/index.js';
 import ErrorMiddleware from './src/middleware/errorMiddleware.js';
+import SecurityMiddleware from './src/middleware/securityMiddleware.js';
 import SocketManager from './src/sockets/index.js';
+import { SOCKET_CONFIG } from './src/config/socket.js';
 
 const app = express();
 const server = http.createServer(app);
 
-const io = new Server(server, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    credentials: true
-  }
-});
+const io = new Server(server, SOCKET_CONFIG);
 
 // Initialize Socket Manager
 const socketManager = new SocketManager(io);
@@ -36,6 +32,11 @@ app.use(cors({
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Security: rate limiting, input sanitization, request logging
+app.use(SecurityMiddleware.apiLimiter);
+app.use(SecurityMiddleware.sanitizeInput);
+app.use(SecurityMiddleware.requestLogger);
 
 // ─── ROUTES ───────────────────────────────────────────────────────────────
 
@@ -73,6 +74,7 @@ async function startServer() {
     console.log(`🚀 Smart Canteen Server running on port ${PORT}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`📱 CORS: Enabled for all origins`);
+    console.log(`🔒 Security: Rate limiting, input sanitization, request logging enabled`);
     console.log(`📋 Routes: /api/auth, /api/menu, /api/orders, /api/wallet, /api/smartpass, ...`);
   });
 }

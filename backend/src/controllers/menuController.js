@@ -7,7 +7,7 @@ class MenuController {
 
       const where = {};
       if (category) where.category = category.toUpperCase();
-      if (vendorId) where.vendorId = vendorId;
+      if (vendorId) where.vendorId = parseInt(vendorId);
       if (isAvailable !== undefined) where.isAvailable = isAvailable === 'true';
       if (search) {
         where.OR = [
@@ -142,10 +142,10 @@ class MenuController {
       const { itemId } = req.params;
 
       const menuItem = await prisma.menuItem.findUnique({
-        where: { id: itemId },
+        where: { id: parseInt(itemId) },
         include: {
           vendor: {
-            select: { id: true, name: true, rating: true, location: true }
+            select: { id: true, name: true, rating: true, address: true }
           }
         }
       });
@@ -199,7 +199,7 @@ class MenuController {
       const { name, description, price, preparationTime, category, imageUrl } = req.body;
 
       const menuItem = await prisma.menuItem.findUnique({
-        where: { id: itemId }
+        where: { id: parseInt(itemId) }
       });
 
       if (!menuItem) {
@@ -217,7 +217,7 @@ class MenuController {
       }
 
       const updatedItem = await prisma.menuItem.update({
-        where: { id: itemId },
+        where: { id: parseInt(itemId) },
         data: {
           name,
           description,
@@ -248,7 +248,7 @@ class MenuController {
       const vendorId = req.vendor.id;
 
       const menuItem = await prisma.menuItem.findUnique({
-        where: { id: itemId }
+        where: { id: parseInt(itemId) }
       });
 
       if (!menuItem) {
@@ -266,7 +266,7 @@ class MenuController {
       }
 
       await prisma.menuItem.delete({
-        where: { id: itemId }
+        where: { id: parseInt(itemId) }
       });
 
       res.json({
@@ -288,7 +288,7 @@ class MenuController {
       const vendorId = req.vendor.id;
 
       const menuItem = await prisma.menuItem.findUnique({
-        where: { id: itemId }
+        where: { id: parseInt(itemId) }
       });
 
       if (!menuItem) {
@@ -306,7 +306,7 @@ class MenuController {
       }
 
       const updatedItem = await prisma.menuItem.update({
-        where: { id: itemId },
+        where: { id: parseInt(itemId) },
         data: {
           isAvailable: !menuItem.isAvailable
         }

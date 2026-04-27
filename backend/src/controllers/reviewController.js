@@ -14,7 +14,7 @@ export const addReview = async (req, res) => {
         comment
       },
       include: {
-        User: {
+        user: {
           select: { id: true, fullName: true }
         }
       }
@@ -41,7 +41,7 @@ export const getMenuItemReviews = async (req, res) => {
     const reviews = await prisma.review.findMany({
       where: { menuItemId: parseInt(menuItemId) },
       include: {
-        User: { select: { id: true, fullName: true } }
+        user: { select: { id: true, fullName: true } }
       },
       orderBy: { createdAt: 'desc' }
     });

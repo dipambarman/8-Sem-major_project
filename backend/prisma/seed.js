@@ -160,16 +160,20 @@ async function main() {
     },
   ];
 
+  // Use createMany for efficient bulk insert (skip if already exists by name-vendor combo)
   for (const item of menuItems) {
-    await prisma.menuItem.upsert({
-      where: {
-        id: 0 // Force creation (will auto-increment)
-      },
-      update: {},
-      create: item,
+    // Check if item already exists for this vendor
+    const existing = await prisma.menuItem.findFirst({
+      where: { name: item.name, vendorId: item.vendorId },
     });
-    console.log(`✅ Created menu item: ${item.name}`);
+    if (!existing) {
+      await prisma.menuItem.create({ data: item });
+      console.log(`✅ Created menu item: ${item.name}`);
+    } else {
+      console.log(`⏭️ Menu item already exists: ${item.name}`);
+    }
   }
+
 
   // ─── SAMPLE TEST USER ────────────────────────────────────────────────
 

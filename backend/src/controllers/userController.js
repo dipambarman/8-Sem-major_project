@@ -166,13 +166,13 @@ export const getUserStats = async (req, res) => {
     const [orderStats, reservationStats] = await Promise.all([
       prisma.order.groupBy({
         by: ['status'],
-        where: { userid: userId },
+        where: { userId },
         _count: { id: true },
-        _sum: { totalprice: true }
+        _sum: { totalAmount: true }
       }),
       prisma.reservation.groupBy({
         by: ['status'],
-        where: { userid: userId },
+        where: { userId },
         _count: { id: true }
       })
     ]);
@@ -183,7 +183,7 @@ export const getUserStats = async (req, res) => {
         orders: orderStats.map(stat => ({
           status: stat.status,
           count: stat._count.id,
-          totalSpent: stat._sum.totalprice || 0
+          totalSpent: stat._sum.totalAmount || 0
         })),
         reservations: reservationStats.map(stat => ({
           status: stat.status,
@@ -231,14 +231,14 @@ export const deleteAccount = async (req, res) => {
     const [activeOrders, activeReservations] = await Promise.all([
       prisma.order.count({
         where: {
-          userid: userId,
-          status: { in: ['pending', 'confirmed', 'preparing', 'ready'] }
+          userId,
+          status: { in: ['PENDING', 'CONFIRMED', 'PREPARING', 'READY'] }
         }
       }),
       prisma.reservation.count({
         where: {
-          userid: userId,
-          status: { in: ['pending', 'confirmed'] }
+          userId,
+          status: { in: ['PENDING', 'CONFIRMED'] }
         }
       })
     ]);

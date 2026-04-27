@@ -5,12 +5,13 @@ import orderController from '../controllers/orderController.js';
 import reservationController from '../controllers/reservationController.js';
 import { authenticateVendor } from '../middleware/authMiddleware.js';
 import ValidationMiddleware from '../middleware/validationMiddleware.js';
+import SecurityMiddleware from '../middleware/securityMiddleware.js';
 
 const router = express.Router();
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────
 
-router.post('/auth/login', vendorLogin);
+router.post('/auth/login', SecurityMiddleware.authLimiter, vendorLogin);
 
 // ─── PROTECTED ROUTES (All below require vendor auth) ─────────────────────
 

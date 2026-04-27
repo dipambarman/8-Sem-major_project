@@ -1,78 +1,21 @@
 import prisma from '../utils/database.js';
 import qrCodeService from '../services/qrCodeService.js';
+import orderService from '../services/orderService.js';
+import { parsePagination, buildPaginationMeta } from '../utils/helpers.js';
 
 class OrderController {
-  // Create order
+  // Create order — delegates to orderService for SmartPass discount + wallet payment
   async createOrder(req, res) {
     try {
       const { items, orderType, paymentMethod, slotTime, specialInstructions } = req.body;
       const userId = req.user.id;
 
-      // Calculate total amount
-      let totalAmount = 0;
-      const orderItems = [];
-
-      for (const item of items) {
-        const menuItem = await prisma.menuItem.findUnique({
-          where: { id: item.menuItemId }
-        });
-        
-        if (!menuItem || !menuItem.isAvailable) {
-          return res.status(400).json({
-            success: false,
-            error: 'Some items are not available'
-          });
-        }
-
-        const itemTotal = Number(menuItem.price) * item.quantity;
-        totalAmount += itemTotal;
-
-        orderItems.push({
-          menuItemId: item.menuItemId,
-          quantity: item.quantity,
-          price: menuItem.price,
-          specialInstructions: item.specialInstructions
-        });
-      }
-
-      // Generate order number
-      const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
-
-      // Create a temporary order ID for QR generation (we'll use orderNumber as unique identifier)
-      const tempOrderId = `temp-${Date.now()}`;
-      const qrCode = await qrCodeService.generateOrderQR(tempOrderId, orderNumber);
-
-      // Create order with items
-      const order = await prisma.order.create({
-        data: {
-          orderNumber,
-          userId,
-          vendorId: orderItems[0].menuItemId, // Assuming single vendor
-          orderType,
-          totalAmount,
-          paymentMethod,
-          slotTime: slotTime ? new Date(slotTime) : null,
-          specialInstructions,
-          qrCode,
-          status: 'PENDING',
-          paymentStatus: 'PENDING',
-          items: {
-            create: orderItems
-          }
-        },
-        include: {
-          items: {
-            include: {
-              menuItem: true
-            }
-          },
-          user: {
-            select: { id: true, fullName: true, email: true }
-          },
-          vendor: {
-            select: { id: true, name: true }
-          }
-        }
+      const order = await orderService.createOrder(userId, {
+        items,
+        orderType,
+        paymentMethod,
+        slotTime,
+        specialInstructions,
       });
 
       res.status(201).json({
@@ -81,11 +24,11 @@ class OrderController {
         message: 'Order created successfully'
       });
     } catch (error) {
+      if (error.status) {
+        return res.status(error.status).json({ success: false, error: error.message });
+      }
       console.error('Create order error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to create order'
-      });
+      res.status(500).json({ success: false, error: 'Failed to create order' });
     }
   }
 
@@ -93,43 +36,32 @@ class OrderController {
   async getUserOrders(req, res) {
     try {
       const userId = req.user.id;
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 10;
+      const { page, limit, skip } = parsePagination(req.query, { limit: 10 });
 
-      const orders = await prisma.order.findMany({
-        where: { userId },
-        include: {
-          items: {
-            include: { menuItem: true }
+      const [orders, total] = await Promise.all([
+        prisma.order.findMany({
+          where: { userId },
+          include: {
+            items: { include: { menuItem: true } },
+            vendor: { select: { id: true, name: true } }
           },
-          vendor: {
-            select: { id: true, name: true }
-          }
-        },
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit
-      });
-
-      const total = await prisma.order.count({ where: { userId } });
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit
+        }),
+        prisma.order.count({ where: { userId } })
+      ]);
 
       res.json({
         success: true,
         data: {
           orders,
-          pagination: {
-            total,
-            page,
-            pages: Math.ceil(total / limit)
-          }
+          pagination: buildPaginationMeta(total, page, limit)
         }
       });
     } catch (error) {
       console.error('Get user orders error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch orders'
-      });
+      res.status(500).json({ success: false, error: 'Failed to fetch orders' });
     }
   }
 
@@ -137,50 +69,36 @@ class OrderController {
   async getVendorOrders(req, res) {
     try {
       const vendorId = req.vendor.id;
-      const { status, page = 1, limit = 20 } = req.query;
+      const { status } = req.query;
+      const { page, limit, skip } = parsePagination(req.query);
 
-      const where = {
-        items: {
-          some: {
-            menuItem: { vendorid: vendorId }
-          }
-        }
-      };
+      const where = { vendorId };
+      if (status) where.status = status;
 
-      if (status) {
-        where.status = status;
-      }
-
-      const orders = await prisma.order.findMany({
-        where,
-        include: {
-          items: { include: { menuItem: true } },
-          user: { select: { id: true, fullName: true, phone: true } }
-        },
-        orderBy: { orderedat: 'desc' },
-        skip: (parseInt(page) - 1) * parseInt(limit),
-        take: parseInt(limit)
-      });
-
-      const total = await prisma.order.count({ where });
+      const [orders, total] = await Promise.all([
+        prisma.order.findMany({
+          where,
+          include: {
+            items: { include: { menuItem: true } },
+            user: { select: { id: true, fullName: true, phone: true } }
+          },
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit
+        }),
+        prisma.order.count({ where })
+      ]);
 
       res.json({
         success: true,
         data: {
           orders,
-          pagination: {
-            total,
-            page: parseInt(page),
-            pages: Math.ceil(total / parseInt(limit))
-          }
+          pagination: buildPaginationMeta(total, page, limit)
         }
       });
     } catch (error) {
       console.error('Get vendor orders error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch vendor orders'
-      });
+      res.status(500).json({ success: false, error: 'Failed to fetch vendor orders' });
     }
   }
 
@@ -194,7 +112,7 @@ class OrderController {
         include: {
           items: { include: { menuItem: true } },
           user: { select: { id: true, fullName: true, phone: true, email: true } },
-          Payment: true
+          payments: true
         }
       });
 
@@ -204,7 +122,7 @@ class OrderController {
 
       // If requested by a vendor, ensure this order belongs to them
       if (req.vendor) {
-        const belongsToVendor = order.items.some(item => item.menuItem.vendorid === req.vendor.id);
+        const belongsToVendor = order.items.some(item => item.menuItem.vendorId === req.vendor.id);
         if (!belongsToVendor) {
           return res.status(403).json({ success: false, error: 'Access denied' });
         }
@@ -238,10 +156,7 @@ class OrderController {
       });
     } catch (error) {
       console.error('Update order status error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to update order status'
-      });
+      res.status(500).json({ success: false, error: 'Failed to update order status' });
     }
   }
 
@@ -253,66 +168,40 @@ class OrderController {
       const validation = qrCodeService.validateQRData(qrData);
 
       if (!validation.valid) {
-        return res.status(400).json({
-          success: false,
-          error: validation.error
-        });
+        return res.status(400).json({ success: false, error: validation.error });
       }
 
       const { data } = validation;
 
       if (data.type === 'order') {
-        // Find order by orderNumber
         const order = await prisma.order.findUnique({
           where: { orderNumber: data.orderNumber },
           include: {
-            items: {
-              include: { menuItem: true }
-            },
-            user: {
-              select: { id: true, fullName: true, email: true }
-            },
-            vendor: {
-              select: { id: true, name: true }
-            }
+            items: { include: { menuItem: true } },
+            user: { select: { id: true, fullName: true, email: true } },
+            vendor: { select: { id: true, name: true } }
           }
         });
 
         if (!order) {
-          return res.status(404).json({
-            success: false,
-            error: 'Order not found'
-          });
+          return res.status(404).json({ success: false, error: 'Order not found' });
         }
 
-        // Check if order can be validated (e.g., in correct status)
         if (order.status !== 'READY' && order.status !== 'PREPARING') {
-          return res.status(400).json({
-            success: false,
-            error: 'Order is not ready for pickup/delivery'
-          });
+          return res.status(400).json({ success: false, error: 'Order is not ready for pickup/delivery' });
         }
 
         res.json({
           success: true,
-          data: {
-            order,
-            qrValid: true
-          },
+          data: { order, qrValid: true },
           message: 'QR code validated successfully'
         });
       } else {
-        res.status(400).json({
-          success: false,
-          error: 'Invalid QR code type'
-        });
+        res.status(400).json({ success: false, error: 'Invalid QR code type' });
       }
     } catch (error) {
       console.error('QR validation error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to validate QR code'
-      });
+      res.status(500).json({ success: false, error: 'Failed to validate QR code' });
     }
   }
 
@@ -322,28 +211,16 @@ class OrderController {
       const { orderId } = req.params;
 
       const order = await prisma.order.findUnique({
-        where: { id: orderId },
-        select: {
-          id: true,
-          orderNumber: true,
-          qrCode: true,
-          userId: true
-        }
+        where: { id: parseInt(orderId) },
+        select: { id: true, orderNumber: true, qrCode: true, userId: true }
       });
 
       if (!order) {
-        return res.status(404).json({
-          success: false,
-          error: 'Order not found'
-        });
+        return res.status(404).json({ success: false, error: 'Order not found' });
       }
 
-      // Check if user owns this order
       if (order.userId !== req.user.id) {
-        return res.status(403).json({
-          success: false,
-          error: 'Access denied'
-        });
+        return res.status(403).json({ success: false, error: 'Access denied' });
       }
 
       res.json({
@@ -356,10 +233,7 @@ class OrderController {
       });
     } catch (error) {
       console.error('Get QR code error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to get QR code'
-      });
+      res.status(500).json({ success: false, error: 'Failed to get QR code' });
     }
   }
 
@@ -370,40 +244,48 @@ class OrderController {
       const userId = req.user.id;
 
       const order = await prisma.order.findUnique({
-        where: { id: orderId },
-        include: {
-          items: true
-        }
+        where: { id: parseInt(orderId) },
+        include: { items: true }
       });
 
       if (!order) {
-        return res.status(404).json({
-          success: false,
-          error: 'Order not found'
-        });
+        return res.status(404).json({ success: false, error: 'Order not found' });
       }
 
-      // Check if user owns this order
       if (order.userId !== userId) {
-        return res.status(403).json({
-          success: false,
-          error: 'Access denied'
-        });
+        return res.status(403).json({ success: false, error: 'Access denied' });
       }
 
-      // Check if order can be cancelled
       if (order.status !== 'PENDING' && order.status !== 'CONFIRMED') {
-        return res.status(400).json({
-          success: false,
-          error: 'Order cannot be cancelled at this stage'
-        });
+        return res.status(400).json({ success: false, error: 'Order cannot be cancelled at this stage' });
       }
 
-      // Update order status
       const updatedOrder = await prisma.order.update({
-        where: { id: orderId },
+        where: { id: parseInt(orderId) },
         data: { status: 'CANCELLED' }
       });
+
+      // If order was paid by wallet, refund the amount
+      if (order.paymentMethod === 'wallet' && order.paymentStatus === 'COMPLETED') {
+        const wallet = await prisma.wallet.findUnique({ where: { userId } });
+        if (wallet) {
+          await prisma.$transaction([
+            prisma.wallet.update({
+              where: { id: wallet.id },
+              data: { balance: { increment: order.totalAmount } },
+            }),
+            prisma.walletTransaction.create({
+              data: {
+                walletId: wallet.id,
+                type: 'CREDIT',
+                amount: order.totalAmount,
+                description: `Refund for cancelled order ${order.orderNumber}`,
+                referenceId: order.orderNumber,
+              },
+            }),
+          ]);
+        }
+      }
 
       res.json({
         success: true,
@@ -412,10 +294,7 @@ class OrderController {
       });
     } catch (error) {
       console.error('Cancel order error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to cancel order'
-      });
+      res.status(500).json({ success: false, error: 'Failed to cancel order' });
     }
   }
 }

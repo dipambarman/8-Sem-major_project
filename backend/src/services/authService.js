@@ -1,39 +1,31 @@
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { JWT_SECRET, JWT_EXPIRY } from '../config/jwt.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key_here';
-
+/**
+ * AuthService — centralizes password hashing, comparison, and JWT operations.
+ * All auth-related controllers should delegate to this service.
+ */
 class AuthService {
-    async hashPassword(password) {
-        return bcrypt.hash(password, 10);
-    }
+  async hashPassword(password, rounds = 12) {
+    return bcrypt.hash(password, rounds);
+  }
 
-    async comparePassword(password, hash) {
-        return bcrypt.compare(password, hash);
-    }
+  async comparePassword(password, hash) {
+    return bcrypt.compare(password, hash);
+  }
 
-    generateToken(userId, email) {
-        return jwt.sign({ userId, email }, JWT_SECRET, { expiresIn: '24h' });
-    }
+  generateToken(payload, expiresIn = JWT_EXPIRY) {
+    return jwt.sign(payload, JWT_SECRET, { expiresIn });
+  }
 
-    verifyToken(token) {
-        try {
-            return jwt.verify(token, JWT_SECRET);
-        } catch (error) {
-            return null;
-        }
+  verifyToken(token) {
+    try {
+      return jwt.verify(token, JWT_SECRET);
+    } catch (error) {
+      return null;
     }
-
-    async register(user) {
-        user.password = await this.hashPassword(user.password);
-        return user;
-    }
-
-    async login(user, password) {
-        const isValid = await this.comparePassword(password, user.password);
-        if (!isValid) throw new Error('Invalid credentials');
-        return this.generateToken(user.id, user.email);
-    }
+  }
 }
 
-module.exports = new AuthService();
+export default new AuthService();

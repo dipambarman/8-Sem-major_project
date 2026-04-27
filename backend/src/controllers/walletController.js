@@ -1,5 +1,6 @@
 import prisma from '../utils/database.js';
 import { verifyPayment } from '../services/paymentService.js';
+import { calculateBonus } from '../utils/helpers.js';
 
 /**
  * GET /api/wallet or /api/wallet/balance
@@ -283,12 +284,4 @@ export const getWalletAnalytics = async (req, res) => {
   }
 };
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────
 
-const calculateBonus = (amount) => {
-  if (amount >= 999) return 150;
-  if (amount >= 699) return 70;
-  if (amount >= 399) return 35;
-  if (amount >= 199) return 15;
-  return 0;
-};
