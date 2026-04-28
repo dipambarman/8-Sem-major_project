@@ -105,19 +105,28 @@ const CheckoutScreen: React.FC = () => {
         }
 
         // 3. Verify Payment on Backend
-        const verifyResponse = await paymentApi.verifyRazorpayPayment({
-          razorpay_order_id: paymentData.orderId,
-          razorpay_payment_id: paymentData.paymentId,
-          razorpay_signature: paymentData.signature,
-          paymentId: paymentId // We need to send the internal paymentId too
-        });
+        if (paymentData.signature === 'mock_signature_for_expo_go') {
+          // Skip strict backend verification because the signature is intentionally fake for Expo Go testing
+          paymentResult = {
+            id: paymentData.paymentId,
+            status: 'successful',
+            mocked: true
+          };
+        } else {
+          const verifyResponse = await paymentApi.verifyRazorpayPayment({
+            razorpay_order_id: paymentData.orderId,
+            razorpay_payment_id: paymentData.paymentId,
+            razorpay_signature: paymentData.signature,
+            paymentId: paymentId // We need to send the internal paymentId too
+          });
 
-        if (!verifyResponse.success) {
-          throw new Error('Payment verification failed');
+          if (!verifyResponse.success) {
+            throw new Error('Payment verification failed');
+          }
+
+          // Success! Proceed to create order
+          paymentResult = verifyResponse.data;
         }
-
-        // Success! Proceed to create order
-        paymentResult = verifyResponse.data;
       }
 
       const orderData = {

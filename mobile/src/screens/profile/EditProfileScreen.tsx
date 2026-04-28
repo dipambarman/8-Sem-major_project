@@ -14,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { RootState } from '../../store/store';
 import { setUser } from '../../store/slices/authSlice';
 
+import { authApi } from '../../services/api/authApi';
+
 const EditProfileScreen = ({ navigation }: any) => {
   const { user } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch();
@@ -31,22 +33,17 @@ const EditProfileScreen = ({ navigation }: any) => {
 
     setIsLoading(true);
     try {
-      // TODO: Call API to update profile
-      // const response = await updateProfile({ fullName, email, phone });
-      
-      // For now, just update local state
-      dispatch(setUser({
-        ...user!,
-        fullName,
-        email,
-        phone,
-      }));
+      const updatedUser = await authApi.updateProfile({ fullName, email, phone });
+
+      // Update Redux store with the server response
+      dispatch(setUser(updatedUser));
 
       Alert.alert('Success', 'Profile updated successfully', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update profile');
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Failed to update profile';
+      Alert.alert('Error', message);
     } finally {
       setIsLoading(false);
     }

@@ -47,13 +47,29 @@ const Orders = ({ socket }) => {
 
   useEffect(() => {
     fetchOrders();
-    
+
     if (socket) {
-      socket.on('newOrder', (order) => {
-        setOrders(prev => [order, ...prev]);
+      const handleNewOrder = (order: any) => {
+        setOrders((prev) => [order, ...prev]);
         setNotification({ type: 'info', message: `New order received: #${order.id}` });
         setTimeout(() => setNotification(null), 5000);
-      });
+      };
+
+      const handleStatusUpdate = (updatedOrder: any) => {
+        setOrders((prev) =>
+          prev.map((order) =>
+            order.id === updatedOrder.id ? { ...order, ...updatedOrder } : order
+          )
+        );
+      };
+
+      socket.on('newOrder', handleNewOrder);
+      socket.on('orderStatusUpdate', handleStatusUpdate);
+
+      return () => {
+        socket.off('newOrder', handleNewOrder);
+        socket.off('orderStatusUpdate', handleStatusUpdate);
+      };
     }
   }, [socket]);
 
@@ -73,7 +89,7 @@ const Orders = ({ socket }) => {
         newStatus,
         estimatedTime || undefined
       );
-      
+
       setOrders(prev =>
         prev.map(order =>
           order.id === selectedOrder.id
@@ -81,7 +97,7 @@ const Orders = ({ socket }) => {
             : order
         )
       );
-      
+
       // Emit socket event for real-time updates
       if (socket) {
         socket.emit('orderStatusUpdate', {
@@ -90,7 +106,7 @@ const Orders = ({ socket }) => {
           estimatedTime,
         });
       }
-      
+
       setStatusUpdateDialog(false);
       setNotification({ type: 'success', message: 'Order status updated successfully' });
       setTimeout(() => setNotification(null), 3000);
@@ -125,8 +141,8 @@ const Orders = ({ socket }) => {
     return icons[status] || <Timer />;
   };
 
-  const filteredOrders = filterStatus === 'all' 
-    ? orders 
+  const filteredOrders = filterStatus === 'all'
+    ? orders
     : orders.filter(order => order.status === filterStatus);
 
   const getNextStatus = (currentStatus) => {
@@ -197,7 +213,7 @@ const Orders = ({ socket }) => {
                 <Typography variant="body2" color="textSecondary" gutterBottom>
                   Customer: {order.user?.fullName}
                 </Typography>
-                
+
                 <Typography variant="body2" color="textSecondary" gutterBottom>
                   Type: {order.ordertype} • Amount: ₹{order.totalprice}
                 </Typography>
@@ -242,7 +258,7 @@ const Orders = ({ socket }) => {
                       Mark as {getNextStatus(order.status)}
                     </Button>
                   )}
-                  
+
                   <Button
                     size="small"
                     variant="outlined"

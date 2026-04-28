@@ -65,13 +65,13 @@ const VendorApp = () => {
   const [socket, setSocket] = useState(null);
   const [newOrdersCount, setNewOrdersCount] = useState(0);
   const [profileMenuAnchor, setProfileMenuAnchor] = useState(null);
-  
+
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
     // Initialize Socket.IO connection
-    const newSocket = io(process.env.REACT_APP_SOCKET_URL || 'http://localhost:3000', {
+    const newSocket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000', {
       auth: {
         token: localStorage.getItem('vendorToken'),
         type: 'vendor'
@@ -85,7 +85,7 @@ const VendorApp = () => {
 
     setSocket(newSocket);
 
-    return () => newSocket.close();
+    return () => { newSocket.close(); };
   }, []);
 
   const handleProfileMenuOpen = (event) => {
@@ -104,21 +104,21 @@ const VendorApp = () => {
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
-      
+
       {/* App Bar */}
       <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
         <Toolbar>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             {getCurrentPageTitle()}
           </Typography>
-          
+
           <Avatar
             sx={{ cursor: 'pointer' }}
             onClick={handleProfileMenuOpen}
           >
             <AccountCircleIcon />
           </Avatar>
-          
+
           <Menu
             anchorEl={profileMenuAnchor}
             open={Boolean(profileMenuAnchor)}

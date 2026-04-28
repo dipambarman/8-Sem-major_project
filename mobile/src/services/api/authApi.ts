@@ -32,6 +32,15 @@ const authApi = {
     return response.data.data;
   },
 
+  updateProfile: async (profileData: { fullName?: string; email?: string; phone?: string }): Promise<User> => {
+    const response = await apiClient.put('/api/auth/profile', profileData);
+    return response.data.data;
+  },
+
+  savePushToken: async (pushToken: string): Promise<void> => {
+    await apiClient.post('/api/auth/push-token', { pushToken });
+  },
+
   logout: async (): Promise<string> => {
     const response = await apiClient.post('/api/auth/logout');
     return response.data.message;

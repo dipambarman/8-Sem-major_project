@@ -104,7 +104,14 @@ const App: React.FC = () => {
 
             if (pushToken) {
               console.log('📱 Push notification token:', pushToken);
-              // TODO: Send push token to your server
+              // Send push token to backend
+              try {
+                const { authApi } = await import('./src/services/api/authApi');
+                await authApi.savePushToken(pushToken as string);
+                console.log('✅ Push token saved to server');
+              } catch (e) {
+                console.warn('⚠️ Failed to save push token to server:', e);
+              }
             }
           } catch (error) {
             console.warn('⚠️ Failed to register for push notifications:', error);
