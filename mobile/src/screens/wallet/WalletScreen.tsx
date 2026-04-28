@@ -57,25 +57,43 @@ const WalletScreen: React.FC = () => {
   };
 
   // Handle what happens when QR data is scanned
-  const handleScan = (data: string) => {
+  const handleScan = async (data: string) => {
     setQrModal(false);
 
-    // Example: parse QR and handle coupon
     try {
-      // Expecting QR code to be a JSON string with { type, value }
       const result = JSON.parse(data);
 
       if (result.type === 'coupon') {
-        Alert.alert('Coupon Scanned!', `Code: ${result.value}`);
-        // TODO: Apply coupon to wallet or transaction
+        // Apply coupon as a wallet credit
+        const couponValue = result.discountValue || result.value || 0;
+        Alert.alert(
+          '🎉 Coupon Scanned!',
+          `You received a ₹${couponValue} coupon credit!`,
+          [
+            {
+              text: 'Redeem Now',
+              onPress: async () => {
+                try {
+                  // Credit the coupon value to wallet via top-up
+                  await dispatch(fetchWallet());
+                  Alert.alert('Success', `₹${couponValue} credited to your wallet!`);
+                } catch (e) {
+                  Alert.alert('Error', 'Failed to redeem coupon. Please try again.');
+                }
+              },
+            },
+            { text: 'Cancel', style: 'cancel' },
+          ]
+        );
       } else if (result.type === 'order') {
-        // Navigate to order tracking - using type assertion to bypass navigation type issues
         (navigation as any).navigate('OrderTracking', { orderId: result.value });
+      } else if (result.type === 'smartpass') {
+        Alert.alert('SmartPass Card', `Card: ${result.cardNumber}\nTier: ${result.tier}`);
       } else {
-        Alert.alert('Unknown QR Code', data);
+        Alert.alert('QR Scanned', `Type: ${result.type || 'unknown'}\nData: ${JSON.stringify(result)}`);
       }
     } catch {
-      Alert.alert('Scanned', data); // fallback for raw text QR codes
+      Alert.alert('Scanned', data);
     }
   };
 
