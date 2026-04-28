@@ -1,7 +1,9 @@
 import simpleRestProvider from 'ra-data-simple-rest';
 import { fetchUtils } from 'react-admin';
 
-const API_URL = process.env.REACT_APP_API_URL ? `${process.env.REACT_APP_API_URL}/api/admin` : 'http://localhost:3000/api/admin';
+const API_URL = (import.meta as any).env?.VITE_API_URL
+  ? `${(import.meta as any).env.VITE_API_URL}/api/admin`
+  : 'http://localhost:3000/api/admin';
 
 const httpClient = (url: string, options: any = {}) => {
   if (!options.headers) {

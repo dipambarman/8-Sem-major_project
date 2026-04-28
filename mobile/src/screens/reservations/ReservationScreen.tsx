@@ -13,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store/store';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import { reservationApi } from '../../services/api/reservationApi';
 import Button from '../../components/common/Button';
 
 interface Reservation {
@@ -21,15 +22,16 @@ interface Reservation {
   time: string;
   partySize: number;
   tableNumber?: number;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'active';
   venueArea: string;
   specialRequests?: string;
+  reservationTime?: string;
 }
 
 const ReservationScreen: React.FC = () => {
   const navigation = useNavigation();
   const { user } = useSelector((state: RootState) => state.auth);
-  
+
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -40,29 +42,21 @@ const ReservationScreen: React.FC = () => {
 
   const fetchReservations = async () => {
     try {
-      // Mock data - replace with actual API call
-      const mockReservations: Reservation[] = [
-        {
-          id: 'RES001',
-          date: '2024-08-30',
-          time: '12:30 PM',
-          partySize: 4,
-          tableNumber: 12,
-          status: 'confirmed',
-          venueArea: 'Main Dining',
-          specialRequests: 'Window seat preferred',
-        },
-        {
-          id: 'RES002',
-          date: '2024-09-02',
-          time: '7:00 PM',
-          partySize: 2,
-          status: 'pending',
-          venueArea: 'Outdoor Seating',
-        },
-      ];
-      
-      setReservations(mockReservations);
+      const response = await reservationApi.getMyReservations();
+      if (response.success) {
+        // Map backend data to our interface
+        const mapped = (response.data || []).map((res: any) => ({
+          id: res.id,
+          date: res.reservationTime ? new Date(res.reservationTime).toISOString().split('T')[0] : '',
+          time: res.reservationTime ? new Date(res.reservationTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+          partySize: res.partySize,
+          tableNumber: res.tableNumber,
+          status: res.status === 'active' ? 'confirmed' : res.status,
+          venueArea: res.venueArea || 'Main Dining',
+          specialRequests: res.specialRequests,
+        }));
+        setReservations(mapped);
+      }
     } catch (error) {
       console.error('Failed to fetch reservations:', error);
     } finally {
@@ -85,12 +79,18 @@ const ReservationScreen: React.FC = () => {
         {
           text: 'Yes, Cancel',
           style: 'destructive',
-          onPress: () => {
-            setReservations(prev =>
-              prev.map(res =>
-                res.id === reservationId ? { ...res, status: 'cancelled' } : res
-              )
-            );
+          onPress: async () => {
+            try {
+              await reservationApi.cancel(reservationId);
+              setReservations(prev =>
+                prev.map(res =>
+                  res.id === reservationId ? { ...res, status: 'cancelled' } : res
+                )
+              );
+              Alert.alert('Success', 'Reservation cancelled successfully');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to cancel reservation');
+            }
           },
         },
       ]
@@ -186,8 +186,7 @@ const ReservationScreen: React.FC = () => {
       </Text>
       <Button
         title="Book a Table"
-        onPress={() => navigation.navigate('TableBooking')}
-        style={styles.bookButton}
+        onPress={() => (navigation as any).navigate('TableBooking')}
       />
     </View>
   );
@@ -202,7 +201,7 @@ const ReservationScreen: React.FC = () => {
         <Text style={styles.title}>My Reservations</Text>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => navigation.navigate('TableBooking')}
+          onPress={() => (navigation as any).navigate('TableBooking')}
         >
           <Ionicons name="add" size={24} color="#007AFF" />
         </TouchableOpacity>
