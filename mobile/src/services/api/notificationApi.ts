@@ -2,6 +2,7 @@ import apiClient from './apiClient';
 
 export interface Notification {
   id: number;
+  title: string;
   message: string;
   type: string;
   isRead: boolean;
@@ -9,14 +10,19 @@ export interface Notification {
 }
 
 const notificationApi = {
-  getNotifications: async (page = 1, limit = 20): Promise<{ notifications: Notification[], pagination: any }> => {
-    const response = await apiClient.get(`/api/notifications?page=${page}&limit=${limit}`);
-    return response.data.data;
+  getNotifications: async (): Promise<{ notifications: Notification[], unreadCount: number }> => {
+    const response = await apiClient.get('/api/notifications');
+    // Backend returns { success, data: [...notifications], unreadCount }
+    return {
+      notifications: response.data.data,
+      unreadCount: response.data.unreadCount || 0,
+    };
   },
 
   getUnreadCount: async (): Promise<number> => {
-    const response = await apiClient.get('/api/notifications/unread-count');
-    return response.data.data.unreadCount;
+    // No dedicated endpoint — piggyback off getNotifications
+    const response = await apiClient.get('/api/notifications');
+    return response.data.unreadCount || 0;
   },
 
   markAsRead: async (notificationId: number): Promise<void> => {
@@ -29,3 +35,4 @@ const notificationApi = {
 };
 
 export { notificationApi };
+

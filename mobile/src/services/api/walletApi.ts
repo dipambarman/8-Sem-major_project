@@ -17,9 +17,10 @@ const walletApi = {
     return response.data;
   },
 
-  enableAutoReload: async (threshold: number, amount: number): Promise<ApiResponse<Wallet>> => {
-    const response = await apiClient.post('/api/wallet/auto-reload', { threshold, amount });
-    return response.data;
+  enableAutoReload: async (_threshold: number, _amount: number): Promise<ApiResponse<Wallet>> => {
+    // Auto-reload feature not yet implemented on backend
+    console.warn('⚠️ enableAutoReload: Backend endpoint not implemented yet');
+    return { success: false, data: {} as Wallet, error: 'Feature not available yet' };
   },
 };
 

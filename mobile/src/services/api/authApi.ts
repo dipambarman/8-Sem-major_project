@@ -27,18 +27,14 @@ const authApi = {
     return response.data.data;
   },
 
-  refreshToken: async (token: string): Promise<{ token: string }> => {
-    const response = await apiClient.post('/api/auth/refresh', { token });
-    return response.data.data;
-  },
-
   updateProfile: async (profileData: { fullName?: string; email?: string; phone?: string }): Promise<User> => {
-    const response = await apiClient.put('/api/auth/profile', profileData);
+    const response = await apiClient.put('/api/users/profile', profileData);
     return response.data.data;
   },
 
-  savePushToken: async (pushToken: string): Promise<void> => {
-    await apiClient.post('/api/auth/push-token', { pushToken });
+  savePushToken: async (_pushToken: string): Promise<void> => {
+    // Push token storage not yet implemented on backend — noop for now
+    console.warn('⚠️ savePushToken: Backend endpoint not implemented yet');
   },
 
   logout: async (): Promise<string> => {
@@ -48,3 +44,4 @@ const authApi = {
 };
 
 export { authApi };
+

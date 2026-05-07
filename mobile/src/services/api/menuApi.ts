@@ -9,7 +9,7 @@ const menuApi = {
   },
 
   searchMenu: async (query: string): Promise<ApiResponse<MenuItem[]>> => {
-    const response = await apiClient.get(`/api/menu/search?q=${query}`);
+    const response = await apiClient.get(`/api/menu?search=${encodeURIComponent(query)}`);
     return response.data;
   },
 

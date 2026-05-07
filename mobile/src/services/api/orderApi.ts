@@ -23,7 +23,7 @@ const orderApi = {
   },
 
   cancelOrder: async (orderId: string): Promise<ApiResponse<Order>> => {
-    const response = await apiClient.post(`/api/orders/${orderId}/cancel`);
+    const response = await apiClient.put(`/api/orders/${orderId}/cancel`);
     return response.data;
   },
 };
