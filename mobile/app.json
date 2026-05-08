@@ -50,7 +50,6 @@
       ]
     ],
     "extra": {
-      "EXPO_PUBLIC_API_URL": "http://localhost:3000",
       "eas": {
         "projectId": "8d846a04-cbfd-4fdf-b10a-bb6c17169975"
       }
