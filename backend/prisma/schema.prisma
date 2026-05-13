@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -72,15 +72,15 @@ enum TransactionType {
 
 model User {
   id            Int                @id @default(autoincrement())
-  email         String             @unique @db.VarChar(255)
-  passwordHash  String             @db.VarChar(255)
-  fullName      String             @db.VarChar(255)
-  phone         String             @db.VarChar(20)
+  email         String             @unique
+  passwordHash  String            
+  fullName      String            
+  phone         String            
   userType      UserType           @default(REGULAR)
   isActive      Boolean            @default(true)
   emailVerified Boolean            @default(false)
-  createdAt     DateTime           @default(now()) @db.Timestamp(6)
-  updatedAt     DateTime           @updatedAt @db.Timestamp(6)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 
   // Relations
   orders        Order[]
@@ -96,19 +96,19 @@ model User {
 
 model Vendor {
   id             Int        @id @default(autoincrement())
-  name           String     @db.VarChar(255)
+  name           String    
   description    String?
-  email          String     @unique @db.VarChar(255)
-  phone          String?    @db.VarChar(20)
-  password       String     @db.VarChar(255)
+  email          String     @unique
+  phone          String?   
+  password       String    
   address        String?
   operatingHours Json?
   cuisineType    Json?
   isActive       Boolean    @default(true)
   rating         Float      @default(0)
-  licenseNumber  String?    @db.VarChar(100)
-  createdAt      DateTime   @default(now()) @db.Timestamp(6)
-  updatedAt      DateTime   @updatedAt @db.Timestamp(6)
+  licenseNumber  String?   
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 
   // Relations
   menuItems    MenuItem[]
@@ -120,19 +120,19 @@ model Vendor {
 
 model MenuItem {
   id              Int      @id @default(autoincrement())
-  name            String   @db.VarChar(255)
+  name            String  
   description     String?
   price           Float
   preparationTime Int      @default(15)
-  category        String   @db.VarChar(100)
+  category        String  
   imageUrl        String?
   isAvailable     Boolean  @default(true)
   isFeatured      Boolean  @default(false)
   isExpress       Boolean  @default(false)
   rating          Float    @default(0)
   vendorId        Int
-  createdAt       DateTime @default(now()) @db.Timestamp(6)
-  updatedAt       DateTime @updatedAt @db.Timestamp(6)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // Relations
   vendor     Vendor      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
@@ -144,21 +144,21 @@ model MenuItem {
 
 model Order {
   id                  Int           @id @default(autoincrement())
-  orderNumber         String        @unique @db.VarChar(50)
+  orderNumber         String        @unique
   userId              Int
   vendorId            Int
-  orderType           String        @default("pickup") @db.VarChar(20)
+  orderType           String        @default("pickup")
   status              OrderStatus   @default(PENDING)
   totalAmount         Float
-  paymentMethod       String?       @db.VarChar(20)
+  paymentMethod       String?      
   paymentStatus       PaymentStatus @default(PENDING)
-  slotTime            DateTime?     @db.Timestamp(6)
+  slotTime            DateTime?    
   specialInstructions String?
   qrCode              String?
   estimatedTime       Int?
   smartPassDiscount   Float         @default(0)
-  createdAt           DateTime      @default(now()) @db.Timestamp(6)
-  updatedAt           DateTime      @updatedAt @db.Timestamp(6)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
   // Relations
   user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -192,16 +192,16 @@ model Payment {
   paymentMethod       PaymentMethod @default(RAZORPAY)
   paymentType         PaymentType   @default(ORDER_PAYMENT)
   status              PaymentStatus @default(PENDING)
-  razorpayOrderId     String?       @db.VarChar(255)
-  razorpayPaymentId   String?       @db.VarChar(255)
+  razorpayOrderId     String?      
+  razorpayPaymentId   String?      
   razorpaySignature   String?
-  paymentTime         DateTime?     @db.Timestamp(6)
+  paymentTime         DateTime?    
   paymentResponse     Json?
   refundAmount        Float?
-  refundTime          DateTime?     @db.Timestamp(6)
-  refundTransactionId String?       @db.VarChar(255)
-  createdAt           DateTime      @default(now()) @db.Timestamp(6)
-  updatedAt           DateTime      @updatedAt @db.Timestamp(6)
+  refundTime          DateTime?    
+  refundTransactionId String?      
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
   // Relations
   user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -215,8 +215,8 @@ model Wallet {
   userId    Int      @unique
   balance   Float    @default(0.00)
   isActive  Boolean  @default(true)
-  createdAt DateTime @default(now()) @db.Timestamp(6)
-  updatedAt DateTime @updatedAt @db.Timestamp(6)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -230,9 +230,9 @@ model WalletTransaction {
   walletId    Int
   type        TransactionType
   amount      Float
-  description String?         @db.VarChar(255)
-  referenceId String?         @db.VarChar(255)
-  createdAt   DateTime        @default(now()) @db.Timestamp(6)
+  description String?        
+  referenceId String?        
+  createdAt   DateTime        @default(now())
 
   // Relations
   wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
@@ -244,18 +244,18 @@ model Reservation {
   id                  Int               @id @default(autoincrement())
   userId              Int
   vendorId            Int
-  reservationTime     DateTime          @db.Timestamp(6)
+  reservationTime     DateTime         
   partySize           Int
-  diningArea          String            @default("main") @db.VarChar(50)
+  diningArea          String            @default("main")
   status              ReservationStatus @default(PENDING)
   specialRequests     String?
-  contactPhone        String?           @db.VarChar(20)
+  contactPhone        String?          
   tableNumber         Int?
   cancelReason        String?
-  actualCheckInTime   DateTime?         @db.Timestamp(6)
-  actualCheckOutTime  DateTime?         @db.Timestamp(6)
-  createdAt           DateTime          @default(now()) @db.Timestamp(6)
-  updatedAt           DateTime          @updatedAt @db.Timestamp(6)
+  actualCheckInTime   DateTime?        
+  actualCheckOutTime  DateTime?        
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 
   // Relations
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -267,12 +267,12 @@ model Reservation {
 model Notification {
   id        Int      @id @default(autoincrement())
   userId    Int
-  title     String   @db.VarChar(255)
+  title     String  
   message   String
   isRead    Boolean  @default(false)
-  type      String   @default("general") @db.VarChar(50)
-  createdAt DateTime @default(now()) @db.Timestamp(6)
-  updatedAt DateTime @updatedAt @db.Timestamp(6)
+  type      String   @default("general")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -286,8 +286,8 @@ model Review {
   menuItemId Int
   rating     Int
   comment    String?
-  createdAt  DateTime @default(now()) @db.Timestamp(6)
-  updatedAt  DateTime @updatedAt @db.Timestamp(6)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   // Relations
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -301,12 +301,12 @@ model SmartPass {
   userId          Int             @unique
   tier            SmartPassTier   @default(SILVER)
   status          SmartPassStatus @default(PENDING)
-  cardNumber      String?         @unique @db.VarChar(50)
+  cardNumber      String?         @unique
   discountPercent Float           @default(5)
-  activatedAt     DateTime?       @db.Timestamp(6)
-  expiresAt       DateTime?       @db.Timestamp(6)
-  createdAt       DateTime        @default(now()) @db.Timestamp(6)
-  updatedAt       DateTime        @updatedAt @db.Timestamp(6)
+  activatedAt     DateTime?      
+  expiresAt       DateTime?      
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

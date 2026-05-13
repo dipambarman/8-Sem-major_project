@@ -32,9 +32,9 @@ export const testConnection = async (retries = 3, timeout = 3000) => {
 
       await Promise.race([prisma.$connect(), timeoutPromise]);
 
-      const [result] = await prisma.$queryRaw`SELECT version(), now() as current_time`;
-      console.log('✅ Connected to PostgreSQL successfully');
-      console.log('📊 Database info:', result);
+      const [result] = await prisma.$queryRaw`SELECT 1 as connection_test`;
+      console.log('✅ Connected to database successfully');
+      console.log('📊 Connection test result:', result);
       return true;
     } catch (error) {
       console.error(`❌ Connection failed (Attempt ${attempt}):`, error.message || error);
