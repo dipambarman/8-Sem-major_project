@@ -33,7 +33,8 @@ export const fetchTransactions = createAsyncThunk(
   'wallet/fetchTransactions',
   async () => {
     const response = await walletApi.getTransactions();
-    return response.data;
+    // The backend returns data: { transactions: [...], pagination: {...} }
+    return (response.data as any).transactions || [];
   }
 );
 

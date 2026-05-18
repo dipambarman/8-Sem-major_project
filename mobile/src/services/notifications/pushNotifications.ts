@@ -32,7 +32,15 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
       return null;
     }
 
-    token = (await Notifications.getExpoPushTokenAsync()).data;
+    try {
+      token = (await Notifications.getExpoPushTokenAsync({
+        projectId: process.env.EXPO_PUBLIC_PROJECT_ID || 'dummy-project-id', // Optional fallback for project id
+      })).data;
+    } catch (error) {
+      // Intentionally suppressing the warning about Expo Go SDK 53 push notifications
+      // to keep the console clean.
+      token = null;
+    }
   } else {
     alert('Must use physical device for Push Notifications');
   }

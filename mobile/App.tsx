@@ -11,6 +11,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider, useDispatch, useSelector } from 'react-redux';
 import * as SplashScreen from 'expo-splash-screen';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Redux store (NO PERSISTOR)
 import { store, AppDispatch, RootState } from './src/store/store';
@@ -35,8 +36,7 @@ LogBox.ignoreLogs([
   'AsyncStorage has been extracted from react-native',
 ]);
 
-// Keep the splash screen visible while we fetch resources
-SplashScreen.preventAutoHideAsync();
+// SplashScreen.preventAutoHideAsync();
 
 const AppContent: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -79,82 +79,62 @@ const App: React.FC = () => {
   const [appIsReady, setAppIsReady] = useState(false);
 
   useEffect(() => {
-    async function prepare() {
+    setAppIsReady(true);
+  }, []);
+
+  // Handle side effects (notifications, etc) after ready
+  useEffect(() => {
+    if (!appIsReady) return;
+
+    async function initializeServices() {
       try {
-        console.log('🔵 App initialization started');
+        console.log('🔵 Background initialization started');
+        const storedToken = await getToken();
 
-        // Create a timeout promise to ensure app loads even if something hangs
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Initialization timed out')), 5000)
-        );
+        // Push Notifications
+        const pushTokenPromise = registerForPushNotifications();
+        const pushTimeoutPromise = new Promise(r => setTimeout(() => r(null), 3000));
+        const pushToken = await Promise.race([pushTokenPromise, pushTimeoutPromise]);
 
-        // Core initialization logic
-        const initPromise = (async () => {
-          // Check for stored authentication token
-          const storedToken = await getToken();
-          console.log('🔵 Stored token:', storedToken ? 'exists' : 'null');
-
-          // Register for push notifications (with error handling)
+        if (pushToken) {
           try {
-            // Using a separate timeout for notifications specifically as they often hang on emulators
-            const pushTokenPromise = registerForPushNotifications();
-            const pushTimeoutPromise = new Promise(r => setTimeout(() => r(null), 2000));
-
-            const pushToken = await Promise.race([pushTokenPromise, pushTimeoutPromise]);
-
-            if (pushToken) {
-              console.log('📱 Push notification token:', pushToken);
-              // Send push token to backend
-              try {
-                const { authApi } = await import('./src/services/api/authApi');
-                await authApi.savePushToken(pushToken as string);
-                console.log('✅ Push token saved to server');
-              } catch (e) {
-                console.warn('⚠️ Failed to save push token to server:', e);
-              }
-            }
-          } catch (error) {
-            console.warn('⚠️ Failed to register for push notifications:', error);
+            const { authApi } = await import('./src/services/api/authApi');
+            await authApi.savePushToken(pushToken as string);
+          } catch (e) {
+            console.warn('⚠️ Failed to save push token:', e);
           }
+        }
 
-          // Initialize Socket.IO connection if user is authenticated
-          if (storedToken) {
-            try {
-              initializeSocket(storedToken);
-              console.log('✅ Socket initialized');
-            } catch (error) {
-              console.warn('⚠️ Failed to initialize socket connection:', error);
-            }
-          }
-        })();
-
-        // Race init against global timeout
-        await Promise.race([initPromise, timeoutPromise]);
-
-        // Artificial delay to show splash screen (optional)
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        console.log('✅ App initialization complete');
-
+        // Socket
+        if (storedToken) {
+          initializeSocket(storedToken);
+        }
       } catch (error) {
-        console.error('❌ Error during app initialization:', error);
-        // Don't show alert for timeout, just proceed
-        // Alert.alert(
-        //   'Initialization Error',
-        //   'Failed to initialize the app. Please restart.',
-        //   [{ text: 'OK' }]
-        // );
-      } finally {
-        setAppIsReady(true);
+        console.warn('⚠️ Error in background init:', error);
       }
     }
 
-    prepare();
-  }, []);
+    initializeServices();
+  }, [appIsReady]);
+
+  useEffect(() => {
+    if (appIsReady) {
+      const hideSplash = async () => {
+        try {
+          console.log('🔵 Hiding splash screen...');
+          await SplashScreen.hideAsync();
+          console.log('✅ Splash screen hidden');
+        } catch (e) {
+          console.warn('⚠️ Error hiding splash screen:', e);
+        }
+      };
+      hideSplash();
+    }
+  }, [appIsReady]);
 
   const onLayoutRootView = React.useCallback(async () => {
     if (appIsReady) {
-      await SplashScreen.hideAsync();
+      await SplashScreen.hideAsync().catch(() => {});
     }
   }, [appIsReady]);
 
@@ -163,11 +143,13 @@ const App: React.FC = () => {
   }
 
   return (
-    <SafeAreaProvider onLayout={onLayoutRootView}>
-      <Provider store={store}>
-        <AppContent />
-      </Provider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider onLayout={onLayoutRootView}>
+        <Provider store={store}>
+          <AppContent />
+        </Provider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 };
 

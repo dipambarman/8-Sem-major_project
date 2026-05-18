@@ -8,7 +8,7 @@ const Stack = createNativeStackNavigator();
 const SearchStackNavigator: React.FC = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Search" component={SearchScreen} />
+      <Stack.Screen name="SearchHome" component={SearchScreen} />
     </Stack.Navigator>
   );
 };

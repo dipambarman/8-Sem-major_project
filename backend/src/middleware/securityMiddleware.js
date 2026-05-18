@@ -21,7 +21,7 @@ class SecurityMiddleware {
   // Strict rate limiting for auth endpoints
   static authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10,
+    max: 100,
     message: {
       success: false,
       error: 'Too many authentication attempts, please try again later.',

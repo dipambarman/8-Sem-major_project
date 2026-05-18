@@ -10,7 +10,7 @@ const Stack = createNativeStackNavigator();
 const WalletStackNavigator: React.FC = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Wallet" component={WalletScreen} />
+      <Stack.Screen name="WalletHome" component={WalletScreen} />
       <Stack.Screen name="TopUp" component={TopUpScreen} />
       <Stack.Screen name="TransactionHistory" component={TransactionHistoryScreen} />
     </Stack.Navigator>

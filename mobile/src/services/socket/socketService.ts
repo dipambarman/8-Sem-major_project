@@ -11,6 +11,9 @@ export const initializeSocket = (token: string) => {
       token,
     },
     transports: ['websocket'],
+    extraHeaders: {
+      'Bypass-Tunnel-Reminder': 'true'
+    }
   });
 
   socket.on('connect', () => {

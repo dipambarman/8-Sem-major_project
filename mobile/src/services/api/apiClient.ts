@@ -26,11 +26,15 @@ const apiClient = axios.create({
   baseURL: API_BASE_URL,
 });
 
-// Automatically attach Bearer token if it exists
+// Automatically attach Bearer token and bypass localtunnel warnings
 apiClient.interceptors.request.use(async (config) => {
   const token = await getToken();
-  if (token && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (config.headers) {
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    // Bypass localtunnel warning screen
+    config.headers['Bypass-Tunnel-Reminder'] = 'true';
   }
   return config;
 });
