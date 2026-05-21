@@ -7,9 +7,12 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  StatusBar,
+  useWindowDimensions,
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { RootState, AppDispatch } from '../../store/store';
 import {
   removeFromCart,
@@ -17,6 +20,8 @@ import {
   decrementQuantity,
   clearCart,
 } from '../../store/slices/cartSlice';
+import { Colors, Radius, Spacing } from '../../theme/colors';
+import { Typography } from '../../theme/typography';
 
 interface CartScreenProps {
   navigation: any;
@@ -29,6 +34,9 @@ const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
   const cart = useSelector((state: RootState) => state.cart);
   const { items = [], total = 0, itemCount = 0 } = cart || {};
 
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleRemoveItem = (itemId: string) => {
@@ -36,10 +44,7 @@ const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
       'Remove Item',
       'Are you sure you want to remove this item from cart?',
       [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
           style: 'destructive',
@@ -62,10 +67,7 @@ const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
       'Clear Cart',
       'Are you sure you want to remove all items?',
       [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Clear',
           style: 'destructive',
@@ -105,7 +107,7 @@ const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
         <Text style={styles.itemName} numberOfLines={2}>
           {item.name}
         </Text>
-        <Text style={styles.itemPrice}>₹{(item.price || 0).toFixed(2)}</Text>
+        <Text style={styles.itemPrice}>₹{(item.price || 0).toFixed(0)}</Text>
 
         <View style={styles.quantityContainer}>
           <TouchableOpacity
@@ -113,7 +115,7 @@ const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
             onPress={() => handleDecrement(item.id)}
             activeOpacity={0.7}
           >
-            <Ionicons name="remove" size={20} color="#007AFF" />
+            <Ionicons name="remove" size={18} color={Colors.accent.primary} />
           </TouchableOpacity>
 
           <Text style={styles.quantityText}>{item.quantity}</Text>
@@ -123,7 +125,7 @@ const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
             onPress={() => handleIncrement(item.id)}
             activeOpacity={0.7}
           >
-            <Ionicons name="add" size={20} color="#007AFF" />
+            <Ionicons name="add" size={18} color={Colors.accent.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -133,14 +135,16 @@ const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
         onPress={() => handleRemoveItem(item.id)}
         activeOpacity={0.7}
       >
-        <Ionicons name="trash-outline" size={22} color="#ff3b30" />
+        <Ionicons name="trash-outline" size={20} color={Colors.status.error} />
       </TouchableOpacity>
     </View>
   );
 
   const renderEmptyCart = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="cart-outline" size={100} color="#C7C7CC" />
+      <View style={styles.emptyIconBox}>
+        <Ionicons name="cart-outline" size={56} color={Colors.text.tertiary} />
+      </View>
       <Text style={styles.emptyTitle}>Your Cart is Empty</Text>
       <Text style={styles.emptySubtitle}>
         Add items to your cart to get started
@@ -148,15 +152,20 @@ const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
       <TouchableOpacity
         style={styles.browseButton}
         onPress={() => navigation.navigate('Home')}
-        activeOpacity={0.7}
+        activeOpacity={0.85}
       >
-        <Text style={styles.browseButtonText}>Browse Menu</Text>
+        <LinearGradient colors={Colors.gradients.goldCta} style={styles.browseGradient}>
+          <Ionicons name="restaurant" size={18} color={Colors.background.primary} />
+          <Text style={styles.browseButtonText}>Browse Menu</Text>
+        </LinearGradient>
       </TouchableOpacity>
     </View>
   );
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.background.primary} />
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -164,7 +173,7 @@ const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={24} color="#000" />
+          <Ionicons name="arrow-back" size={22} color={Colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Cart</Text>
         {items.length > 0 && (
@@ -184,24 +193,25 @@ const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
         renderEmptyCart()
       ) : (
         <>
-          <FlatList
-            data={items}
-            renderItem={renderCartItem}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContainer}
-            showsVerticalScrollIndicator={false}
-          />
+          <View style={[isTablet && { width: '100%', maxWidth: 800, alignSelf: 'center', flex: 1 }]}>
+            <FlatList
+              data={items}
+              renderItem={renderCartItem}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.listContainer}
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
 
           {/* Footer with Total and Checkout */}
-          <View style={styles.footer}>
+          <View style={[styles.footer, isTablet && { width: '100%', maxWidth: 800, alignSelf: 'center', borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, borderLeftWidth: 1, borderRightWidth: 1, borderColor: Colors.border.primary }]}>
             <View style={styles.totalContainer}>
               <View>
-                <Text style={styles.totalLabel}>Total Items</Text>
-                <Text style={styles.totalValue}>{itemCount} items</Text>
+                <Text style={styles.totalLabel}>{itemCount} items</Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.totalLabel}>Total Amount</Text>
-                <Text style={styles.totalAmount}>₹{total.toFixed(2)}</Text>
+                <Text style={styles.totalLabel}>Total</Text>
+                <Text style={styles.totalAmount}>₹{total.toFixed(0)}</Text>
               </View>
             </View>
 
@@ -212,16 +222,21 @@ const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
               ]}
               onPress={handleCheckout}
               disabled={isProcessing}
-              activeOpacity={0.7}
+              activeOpacity={0.85}
             >
-              {isProcessing ? (
-                <Text style={styles.checkoutButtonText}>Processing...</Text>
-              ) : (
-                <>
-                  <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
-                  <Ionicons name="arrow-forward" size={20} color="#fff" />
-                </>
-              )}
+              <LinearGradient
+                colors={isProcessing ? ['#374151', '#374151'] : Colors.gradients.goldCta}
+                style={styles.checkoutGradient}
+              >
+                {isProcessing ? (
+                  <Text style={styles.checkoutButtonText}>Processing...</Text>
+                ) : (
+                  <>
+                    <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
+                    <Ionicons name="arrow-forward" size={18} color={Colors.background.primary} />
+                  </>
+                )}
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         </>
@@ -233,83 +248,85 @@ const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: Colors.background.primary,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: '#fff',
+    paddingHorizontal: Spacing.xl,
+    paddingTop: 56,
+    paddingBottom: Spacing.lg,
+    backgroundColor: Colors.background.primary,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: Colors.border.primary,
   },
   backButton: {
     width: 40,
     height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.background.tertiary,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000',
+    ...Typography.h3,
+    color: Colors.text.primary,
   },
   clearButton: {
-    paddingHorizontal: 15,
+    paddingHorizontal: 14,
     paddingVertical: 8,
+    borderRadius: Radius.sm,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
   },
   clearButtonText: {
-    fontSize: 16,
-    color: '#ff3b30',
-    fontWeight: '600',
+    ...Typography.label,
+    color: Colors.status.error,
+    fontSize: 14,
   },
   listContainer: {
-    padding: 15,
+    padding: Spacing.lg,
     paddingBottom: 20,
   },
   cartItem: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 3,
+    backgroundColor: Colors.background.card,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border.primary,
   },
   itemImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 10,
-    backgroundColor: '#F2F2F7',
+    width: 72,
+    height: 72,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.background.tertiary,
   },
   itemDetails: {
     flex: 1,
-    marginLeft: 15,
+    marginLeft: 14,
     justifyContent: 'space-between',
   },
   itemName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 5,
+    ...Typography.label,
+    color: Colors.text.primary,
+    marginBottom: 4,
   },
   itemPrice: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#007AFF',
-    marginBottom: 10,
+    ...Typography.price,
+    color: Colors.accent.primary,
+    fontSize: 16,
+    marginBottom: 8,
   },
   quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F2F2F7',
-    borderRadius: 8,
+    backgroundColor: Colors.background.tertiary,
+    borderRadius: Radius.sm,
     alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: Colors.border.primary,
   },
   quantityButton: {
     width: 32,
@@ -318,18 +335,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   quantityText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-    marginHorizontal: 15,
-    minWidth: 20,
+    ...Typography.label,
+    color: Colors.text.primary,
+    marginHorizontal: 12,
+    minWidth: 18,
     textAlign: 'center',
   },
   removeButton: {
     justifyContent: 'center',
     alignItems: 'center',
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    alignSelf: 'center',
   },
   emptyContainer: {
     flex: 1,
@@ -337,84 +356,88 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 40,
   },
+  emptyIconBox: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: Colors.background.tertiary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   emptyTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000',
-    marginTop: 20,
-    marginBottom: 10,
+    ...Typography.h3,
+    color: Colors.text.primary,
+    marginBottom: 8,
   },
   emptySubtitle: {
-    fontSize: 16,
-    color: '#8E8E93',
+    ...Typography.body,
+    color: Colors.text.secondary,
     textAlign: 'center',
-    marginBottom: 30,
+    marginBottom: 28,
   },
   browseButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 25,
+    borderRadius: Radius.button,
+    overflow: 'hidden',
+  },
+  browseGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    gap: 8,
   },
   browseButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+    ...Typography.button,
+    color: Colors.background.primary,
   },
   footer: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 30,
+    backgroundColor: Colors.background.secondary,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
+    paddingBottom: 28,
     borderTopWidth: 1,
-    borderTopColor: '#E5E5EA',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 10,
+    borderTopColor: Colors.border.primary,
   },
   totalContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: Spacing.lg,
+    alignItems: 'flex-end',
   },
   totalLabel: {
-    fontSize: 14,
-    color: '#8E8E93',
-    marginBottom: 5,
-  },
-  totalValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+    ...Typography.bodySm,
+    color: Colors.text.secondary,
   },
   totalAmount: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#007AFF',
+    ...Typography.priceLg,
+    color: Colors.accent.primary,
+    fontSize: 22,
+    marginTop: 2,
   },
   checkoutButton: {
-    backgroundColor: '#007AFF',
+    borderRadius: Radius.button,
+    overflow: 'hidden',
+    shadowColor: Colors.accent.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  checkoutButtonDisabled: {
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  checkoutGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
-    borderRadius: 15,
-    shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  checkoutButtonDisabled: {
-    backgroundColor: '#C7C7CC',
+    gap: 8,
   },
   checkoutButtonText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#fff',
-    marginRight: 10,
+    ...Typography.button,
+    color: Colors.background.primary,
   },
 });
 

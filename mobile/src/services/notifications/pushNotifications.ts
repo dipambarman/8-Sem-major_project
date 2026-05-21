@@ -1,10 +1,13 @@
 import * as Notifications from 'expo-notifications';
+import { SchedulableTriggerInputTypes } from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
@@ -65,6 +68,6 @@ export const scheduleLocalNotification = async (title: string, body: string, dat
       data,
       sound: 'default',
     },
-    trigger: { seconds: 1 },
+    trigger: { type: SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 1 },
   });
 };

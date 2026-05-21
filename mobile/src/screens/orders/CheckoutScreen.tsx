@@ -6,10 +6,13 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  StatusBar,
+  useWindowDimensions,
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { RootState, AppDispatch } from '../../store/store';
 import { createOrder } from '../../store/slices/orderSlice';
 import { fetchWallet } from '../../store/slices/walletSlice';
@@ -18,6 +21,8 @@ import { initiatePayment } from '../../services/payment/razorpay';
 import { paymentApi } from '../../services/api/paymentApi';
 import Button from '../../components/common/Button';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import { Colors, Radius, Spacing } from '../../theme/colors';
+import { Typography } from '../../theme/typography';
 
 const CheckoutScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -31,6 +36,9 @@ const CheckoutScreen: React.FC = () => {
 
   const { user } = useSelector((state: RootState) => state.auth);
   const { wallet } = useSelector((state: RootState) => state.wallet);
+
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
 
   // Create a separate effect for fetching wallet to avoid infinite loops or missing data
   React.useEffect(() => {
@@ -82,7 +90,7 @@ const CheckoutScreen: React.FC = () => {
         const paymentData = await initiatePayment({
           amount: total,
           orderId: razorpayOrderId,
-          key: key, // Pass the key received from backend
+          key: key,
           description: 'Smart Canteen Order',
           prefill: {
             email: user?.email,
@@ -90,13 +98,6 @@ const CheckoutScreen: React.FC = () => {
             name: user?.fullName,
           },
         });
-
-        // FIX: The wrapper (Step 405) didn't allow passing 'key'!
-        // I should probably update `razorpay.ts` to accept 'key' or handle it here.
-        // But for now, let's assume `initiatePayment` might fail if key is missing.
-        // Actually, let's look at Step 405 again. 
-        // It uses `RazorpayCheckout.open(razorpayOptions)`. `razorpayOptions` needs `key`.
-        // The current `razorpay.ts` DOES NOT set the key. This is a bug.
 
         if (!paymentData.success) {
           setLoading(false);
@@ -106,7 +107,6 @@ const CheckoutScreen: React.FC = () => {
 
         // 3. Verify Payment on Backend
         if (paymentData.signature === 'mock_signature_for_expo_go') {
-          // Skip strict backend verification because the signature is intentionally fake for Expo Go testing
           paymentResult = {
             id: paymentData.paymentId,
             status: 'successful',
@@ -117,14 +117,13 @@ const CheckoutScreen: React.FC = () => {
             razorpay_order_id: paymentData.orderId,
             razorpay_payment_id: paymentData.paymentId,
             razorpay_signature: paymentData.signature,
-            paymentId: paymentId // We need to send the internal paymentId too
+            paymentId: paymentId
           });
 
           if (!verifyResponse.success) {
             throw new Error('Payment verification failed');
           }
 
-          // Success! Proceed to create order
           paymentResult = verifyResponse.data;
         }
       }
@@ -144,7 +143,7 @@ const CheckoutScreen: React.FC = () => {
       dispatch(clearCart());
 
       Alert.alert(
-        'Order Placed!',
+        '🎉 Order Placed!',
         `Your order #${result.id} has been placed successfully`,
         [
           {
@@ -160,260 +159,363 @@ const CheckoutScreen: React.FC = () => {
     }
   };
 
-  const OrderTypeOption = ({ type, icon, label, description }: any) => (
-    <TouchableOpacity
-      style={[
-        styles.orderTypeOption,
-        orderType === type && styles.selectedOrderType,
-      ]}
-      onPress={() => setOrderType(type)}
-    >
-      <Ionicons name={icon} size={24} color={orderType === type ? '#007AFF' : '#666'} />
-      <View style={styles.orderTypeText}>
-        <Text style={styles.orderTypeLabel}>{label}</Text>
-        <Text style={styles.orderTypeDescription}>{description}</Text>
-      </View>
-      {orderType === type && (
-        <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
-      )}
-    </TouchableOpacity>
-  );
+  const ORDER_TYPES = [
+    { type: 'pickup' as const, icon: 'bag', label: 'Pickup', desc: 'Ready in 15-20 mins', color: '#10B981' },
+    { type: 'delivery' as const, icon: 'bicycle', label: 'Delivery', desc: 'Delivered to your location', color: '#3B82F6' },
+    { type: 'dine_in' as const, icon: 'restaurant', label: 'Dine In', desc: 'Enjoy at the canteen', color: '#8B5CF6' },
+  ];
 
-  const PaymentOption = ({ method, icon, label, description }: any) => (
-    <TouchableOpacity
-      style={[
-        styles.paymentOption,
-        paymentMethod === method && styles.selectedPaymentOption,
-      ]}
-      onPress={() => setPaymentMethod(method)}
-    >
-      <Ionicons name={icon} size={24} color={paymentMethod === method ? '#007AFF' : '#666'} />
-      <View style={styles.paymentText}>
-        <Text style={styles.paymentLabel}>{label}</Text>
-        <Text style={styles.paymentDescription}>{description}</Text>
-      </View>
-      {paymentMethod === method && (
-        <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
-      )}
-    </TouchableOpacity>
-  );
+  const PAYMENT_METHODS = [
+    { method: 'wallet' as const, icon: 'wallet', label: 'Wallet', desc: `Balance: ₹${wallet?.balance?.toFixed(2) || '0.00'}`, color: Colors.accent.primary },
+    { method: 'razorpay' as const, icon: 'card', label: 'Card / UPI', desc: 'Pay with Razorpay', color: '#3B82F6' },
+  ];
 
   if (loading) {
-    return <LoadingSpinner message="Processing your order..." />;
+    return (
+      <View style={styles.loadingContainer}>
+        <LoadingSpinner message="Processing your order..." />
+      </View>
+    );
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Order Summary</Text>
-        {cartItems.map((item) => (
-          <View key={item.id} style={styles.orderItem}>
-            <Text style={styles.itemName}>{item.name}</Text>
-            <Text style={styles.itemQuantity}>×{item.quantity}</Text>
-            <Text style={styles.itemPrice}>₹{((item.price || 0) * item.quantity).toFixed(2)}</Text>
-          </View>
-        ))}
-
-        <View style={styles.totals}>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Subtotal</Text>
-            <Text style={styles.totalValue}>₹{subtotal.toFixed(2)}</Text>
-          </View>
-          {deliveryFee > 0 && (
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Delivery Fee</Text>
-              <Text style={styles.totalValue}>₹{deliveryFee.toFixed(2)}</Text>
+    <View style={styles.wrapper}>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.background.primary} />
+      <ScrollView 
+        style={styles.container} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[isTablet && { width: '100%', maxWidth: 800, alignSelf: 'center', paddingTop: Spacing.xl }]}
+      >
+        {/* Order Summary */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Order Summary</Text>
+          {cartItems.map((item) => (
+            <View key={item.id} style={styles.orderItem}>
+              <View style={styles.itemLeft}>
+                <View style={styles.qtyBadge}>
+                  <Text style={styles.qtyText}>{item.quantity}x</Text>
+                </View>
+                <Text style={styles.itemName}>{item.name}</Text>
+              </View>
+              <Text style={styles.itemPrice}>₹{((item.price || 0) * item.quantity).toFixed(0)}</Text>
             </View>
-          )}
-          <View style={[styles.totalRow, styles.grandTotal]}>
-            <Text style={styles.grandTotalLabel}>Total</Text>
-            <Text style={styles.grandTotalValue}>₹{total.toFixed(2)}</Text>
+          ))}
+
+          <View style={styles.totals}>
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Subtotal</Text>
+              <Text style={styles.totalValue}>₹{subtotal.toFixed(0)}</Text>
+            </View>
+            {deliveryFee > 0 && (
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Delivery Fee</Text>
+                <Text style={styles.totalValue}>₹{deliveryFee.toFixed(0)}</Text>
+              </View>
+            )}
+            <View style={styles.grandTotalRow}>
+              <Text style={styles.grandTotalLabel}>Total</Text>
+              <Text style={styles.grandTotalValue}>₹{total.toFixed(0)}</Text>
+            </View>
           </View>
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Order Type</Text>
-        <OrderTypeOption
-          type="pickup"
-          icon="bag"
-          label="Pickup"
-          description="Ready in 15-20 minutes"
-        />
-        <OrderTypeOption
-          type="delivery"
-          icon="bicycle"
-          label="Delivery"
-          description="Delivered to your location"
-        />
-        <OrderTypeOption
-          type="dine_in"
-          icon="restaurant"
-          label="Dine In"
-          description="Reserve a table"
-        />
-      </View>
+        {/* Order Type */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Order Type</Text>
+          {ORDER_TYPES.map(({ type, icon, label, desc, color }) => (
+            <TouchableOpacity
+              key={type}
+              style={[styles.optionCard, orderType === type && styles.optionCardActive]}
+              onPress={() => setOrderType(type)}
+            >
+              <View style={[styles.optionIconBox, { backgroundColor: `${color}15` }]}>
+                <Ionicons name={icon as any} size={22} color={color} />
+              </View>
+              <View style={styles.optionText}>
+                <Text style={styles.optionLabel}>{label}</Text>
+                <Text style={styles.optionDesc}>{desc}</Text>
+              </View>
+              {orderType === type ? (
+                <Ionicons name="checkmark-circle" size={22} color={Colors.accent.primary} />
+              ) : (
+                <View style={styles.optionRadio} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Payment Method</Text>
-        <PaymentOption
-          method="wallet"
-          icon="wallet"
-          label="Wallet"
-          description={`Balance: ₹${wallet?.balance?.toFixed(2) || '0.00'}`}
-        />
-        <PaymentOption
-          method="razorpay"
-          icon="card"
-          label="Card/UPI"
-          description="Pay with Razorpay"
-        />
-      </View>
+        {/* Dine-In Note */}
+        {orderType === 'dine_in' && (
+          <View style={styles.dineInNote}>
+            <LinearGradient
+              colors={['rgba(139, 92, 246, 0.1)', 'rgba(139, 92, 246, 0.05)']}
+              style={styles.dineInNoteGradient}
+            >
+              <Ionicons name="information-circle" size={20} color="#8B5CF6" />
+              <Text style={styles.dineInNoteText}>
+                Your food will be served at your table. Don't forget to book a table if you haven't already!
+              </Text>
+            </LinearGradient>
+          </View>
+        )}
 
-      <View style={styles.buttonContainer}>
-        <Button
-          title={`Place Order - ₹${total.toFixed(2)}`}
-          onPress={handlePlaceOrder}
-          loading={loading}
-          size="large"
-        />
+        {/* Payment Method */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Payment</Text>
+          {PAYMENT_METHODS.map(({ method, icon, label, desc, color }) => (
+            <TouchableOpacity
+              key={method}
+              style={[styles.optionCard, paymentMethod === method && styles.optionCardActive]}
+              onPress={() => setPaymentMethod(method)}
+            >
+              <View style={[styles.optionIconBox, { backgroundColor: `${color}15` }]}>
+                <Ionicons name={icon as any} size={22} color={color} />
+              </View>
+              <View style={styles.optionText}>
+                <Text style={styles.optionLabel}>{label}</Text>
+                <Text style={styles.optionDesc}>{desc}</Text>
+              </View>
+              {paymentMethod === method ? (
+                <Ionicons name="checkmark-circle" size={22} color={Colors.accent.primary} />
+              ) : (
+                <View style={styles.optionRadio} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={{ height: 100 }} />
+      </ScrollView>
+
+      {/* Fixed Bottom CTA */}
+      <View style={[styles.bottomBar, isTablet && { width: '100%', maxWidth: 800, alignSelf: 'center', borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, borderLeftWidth: 1, borderRightWidth: 1, borderColor: Colors.border.primary }]}>
+        <View style={styles.bottomInfo}>
+          <Text style={styles.bottomLabel}>Total</Text>
+          <Text style={styles.bottomPrice}>₹{total.toFixed(0)}</Text>
+        </View>
+        <TouchableOpacity style={styles.placeOrderBtn} onPress={handlePlaceOrder} activeOpacity={0.85}>
+          <LinearGradient colors={Colors.gradients.goldCta} style={styles.placeOrderGradient}>
+            <Text style={styles.placeOrderText}>Place Order</Text>
+            <Ionicons name="arrow-forward" size={18} color={Colors.background.primary} />
+          </LinearGradient>
+        </TouchableOpacity>
       </View>
-    </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+    backgroundColor: Colors.background.primary,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: Colors.background.primary,
+  },
+
+  // Sections
   section: {
-    backgroundColor: '#fff',
-    marginBottom: 10,
-    padding: 16,
+    backgroundColor: Colors.background.card,
+    marginHorizontal: Spacing.xl,
+    marginBottom: Spacing.md,
+    padding: Spacing.lg,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border.primary,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: '#333',
+    ...Typography.h4,
+    color: Colors.text.primary,
+    marginBottom: Spacing.lg,
   },
+
+  // Order Items
   orderItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    justifyContent: 'space-between',
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: Colors.border.secondary,
+  },
+  itemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 10,
+  },
+  qtyBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: Colors.accent.muted,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  qtyText: {
+    ...Typography.captionBold,
+    color: Colors.accent.primary,
   },
   itemName: {
+    ...Typography.body,
+    color: Colors.text.primary,
     flex: 1,
-    fontSize: 16,
-    color: '#333',
-  },
-  itemQuantity: {
-    fontSize: 14,
-    color: '#666',
-    marginRight: 12,
   },
   itemPrice: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
+    ...Typography.label,
+    color: Colors.text.primary,
   },
+
+  // Totals
   totals: {
-    marginTop: 16,
-    paddingTop: 16,
+    marginTop: Spacing.lg,
+    paddingTop: Spacing.md,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: Colors.border.primary,
   },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   totalLabel: {
-    fontSize: 14,
-    color: '#666',
+    ...Typography.body,
+    color: Colors.text.secondary,
   },
   totalValue: {
-    fontSize: 14,
-    color: '#333',
+    ...Typography.body,
+    color: Colors.text.primary,
   },
-  grandTotal: {
+  grandTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    paddingTop: 8,
+    borderTopColor: Colors.border.primary,
+    paddingTop: 10,
     marginTop: 8,
   },
   grandTotalLabel: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    ...Typography.h4,
+    color: Colors.text.primary,
   },
   grandTotalValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#007AFF',
+    ...Typography.h4,
+    color: Colors.accent.primary,
   },
-  orderTypeOption: {
+
+  // Option Cards
+  optionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 14,
     marginBottom: 8,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
+    backgroundColor: Colors.background.tertiary,
+    borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: Colors.border.primary,
   },
-  selectedOrderType: {
-    borderColor: '#007AFF',
-    backgroundColor: '#f0f8ff',
+  optionCardActive: {
+    borderColor: Colors.accent.primary,
+    backgroundColor: Colors.accent.muted,
   },
-  orderTypeText: {
+  optionIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  optionText: {
     flex: 1,
-    marginLeft: 12,
   },
-  orderTypeLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
+  optionLabel: {
+    ...Typography.label,
+    color: Colors.text.primary,
   },
-  orderTypeDescription: {
-    fontSize: 14,
-    color: '#666',
+  optionDesc: {
+    ...Typography.caption,
+    color: Colors.text.secondary,
     marginTop: 2,
   },
-  paymentOption: {
+  optionRadio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.border.primary,
+  },
+
+  // Dine-In Note
+  dineInNote: {
+    marginHorizontal: Spacing.xl,
+    marginBottom: Spacing.md,
+    borderRadius: Radius.md,
+    overflow: 'hidden',
+  },
+  dineInNoteGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    marginBottom: 8,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
+    padding: 14,
+    gap: 10,
   },
-  selectedPaymentOption: {
-    borderColor: '#007AFF',
-    backgroundColor: '#f0f8ff',
-  },
-  paymentText: {
+  dineInNoteText: {
+    ...Typography.bodySm,
+    color: '#A78BFA',
     flex: 1,
-    marginLeft: 12,
   },
-  paymentLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
+
+  // Bottom Bar
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background.secondary,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border.primary,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: 14,
+    paddingBottom: 28,
   },
-  paymentDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
+  bottomInfo: {
+    marginRight: Spacing.xl,
   },
-  buttonContainer: {
-    padding: 16,
-    backgroundColor: '#fff',
+  bottomLabel: {
+    ...Typography.caption,
+    color: Colors.text.secondary,
+  },
+  bottomPrice: {
+    ...Typography.priceLg,
+    color: Colors.accent.primary,
+    fontSize: 22,
+  },
+  placeOrderBtn: {
+    flex: 1,
+    borderRadius: Radius.button,
+    overflow: 'hidden',
+    shadowColor: Colors.accent.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  placeOrderGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    gap: 8,
+  },
+  placeOrderText: {
+    ...Typography.button,
+    color: Colors.background.primary,
   },
 });
 

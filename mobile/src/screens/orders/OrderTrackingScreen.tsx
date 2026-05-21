@@ -257,7 +257,7 @@ const OrderTrackingScreen: React.FC = () => {
                       ]}
                     >
                       <Ionicons
-                        name={step.icon}
+                        name={step.icon as any}
                         size={20}
                         color={
                           status === 'completed' || status === 'active' ? '#fff' : '#ccc'

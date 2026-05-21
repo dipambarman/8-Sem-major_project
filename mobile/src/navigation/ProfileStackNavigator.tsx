@@ -6,19 +6,26 @@ import SettingsScreen from '../screens/profile/SettingsScreen';
 import NotificationsScreen from '../screens/profile/NotificationsScreen';
 import PremiumScreen from '../screens/profile/PremiumScreen';
 import SupportScreen from '../screens/profile/SupportScreen';
+import { Colors } from '../theme/colors';
 
 const Stack = createStackNavigator();
 
 const ProfileStackNavigator = () => {
   return (
     <Stack.Navigator
+      id="ProfileStack"
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#007AFF',
+          backgroundColor: Colors.background.secondary,
+          elevation: 0,
+          shadowOpacity: 0,
+          borderBottomWidth: 1,
+          borderBottomColor: Colors.border.primary,
         },
-        headerTintColor: '#fff',
+        headerTintColor: Colors.text.primary,
         headerTitleStyle: {
           fontWeight: 'bold',
+          color: Colors.text.primary,
         },
       }}
     >
@@ -26,7 +33,7 @@ const ProfileStackNavigator = () => {
       <Stack.Screen 
         name="ProfileHome" 
         component={ProfileScreen}
-        options={{ title: 'Profile' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen 
         name="EditProfile" 
@@ -46,7 +53,7 @@ const ProfileStackNavigator = () => {
       <Stack.Screen 
         name="Premium" 
         component={PremiumScreen}
-        options={{ title: 'Premium Membership' }}
+        options={{ title: 'SmartPass', headerShown: false }}
       />
       <Stack.Screen 
         name="Support" 

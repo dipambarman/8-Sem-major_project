@@ -58,6 +58,8 @@ export interface Order {
   slotTime?: string;
   items: OrderItem[];
   createdAt: string;
+  estimatedTime?: string;
+  specialInstructions?: string;
 }
 
 export interface OrderItem {

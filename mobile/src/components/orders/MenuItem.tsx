@@ -1,7 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { MenuItem as MenuItemType } from '../../types/api';
+import { Colors, Radius, Spacing } from '../../theme/colors';
+import { Typography } from '../../theme/typography';
 
 interface MenuItemProps {
   item: MenuItemType;
@@ -9,77 +12,49 @@ interface MenuItemProps {
   cartQuantity?: number;
 }
 
-const MenuItem: React.FC<MenuItemProps> = ({
-  item,
-  onAddToCart,
-  cartQuantity = 0,
-}) => {
-  const handleAddToCart = () => {
-    onAddToCart(item, 1);
-  };
-
-  const handleIncrement = () => {
-    onAddToCart(item, cartQuantity + 1);
-  };
-
-  const handleDecrement = () => {
-    if (cartQuantity > 0) {
-      onAddToCart(item, cartQuantity - 1);
-    }
-  };
+const MenuItem: React.FC<MenuItemProps> = ({ item, onAddToCart, cartQuantity = 0 }) => {
+  const handleAddToCart = () => onAddToCart(item, 1);
+  const handleIncrement = () => onAddToCart(item, cartQuantity + 1);
+  const handleDecrement = () => { if (cartQuantity > 0) onAddToCart(item, cartQuantity - 1); };
 
   return (
-    <View style={[styles.container, !item.isAvailable && styles.unavailable]}>
-      <View style={styles.content}>
-        <View style={styles.info}>
-          <View style={styles.header}>
-            <Text style={styles.name}>{item.name}</Text>
+    <View style={[s.container, !item.isAvailable && s.unavailable]}>
+      <View style={s.content}>
+        <View style={s.info}>
+          <View style={s.header}>
+            <Text style={s.name}>{item.name}</Text>
             {item.isExpress && (
-              <View style={styles.expressTag}>
-                <Ionicons name="flash" size={12} color="#fff" />
-                <Text style={styles.expressText}>EXPRESS</Text>
+              <View style={s.expressTag}>
+                <Ionicons name="flash" size={10} color="#fff" />
+                <Text style={s.expressText}>EXPRESS</Text>
               </View>
             )}
           </View>
-          
-          <Text style={styles.description} numberOfLines={2}>
-            {item.description}
-          </Text>
-          
-          <View style={styles.details}>
-            <Text style={styles.price}>₹{item.price}</Text>
-            <View style={styles.prepTime}>
-              <Ionicons name="time" size={14} color="#666" />
-              <Text style={styles.prepTimeText}>{item.preparationTime} min</Text>
+          <Text style={s.description} numberOfLines={2}>{item.description}</Text>
+          <View style={s.details}>
+            <Text style={s.price}>₹{item.price}</Text>
+            <View style={s.prepTime}>
+              <Ionicons name="time" size={12} color={Colors.text.tertiary} />
+              <Text style={s.prepTimeText}>{item.preparationTime} min</Text>
             </View>
           </View>
         </View>
-
-        {item.image && (
-          <Image source={{ uri: item.image }} style={styles.image} />
-        )}
+        {item.image && <Image source={{ uri: item.image }} style={s.image} />}
       </View>
-
-      <View style={styles.actions}>
+      <View style={s.actions}>
         {!item.isAvailable ? (
-          <View style={styles.unavailableButton}>
-            <Text style={styles.unavailableText}>Currently Unavailable</Text>
-          </View>
+          <View style={s.unavailableBtn}><Text style={s.unavailableText}>Unavailable</Text></View>
         ) : cartQuantity === 0 ? (
-          <TouchableOpacity style={styles.addButton} onPress={handleAddToCart}>
-            <Text style={styles.addButtonText}>ADD</Text>
+          <TouchableOpacity style={s.addBtn} onPress={handleAddToCart}>
+            <LinearGradient colors={Colors.gradients.goldCta} style={s.addBtnGrad}>
+              <Text style={s.addBtnText}>ADD</Text>
+            </LinearGradient>
           </TouchableOpacity>
         ) : (
-          <View style={styles.quantityControls}>
-            <TouchableOpacity style={styles.quantityButton} onPress={handleDecrement}>
-              <Ionicons name="remove" size={16} color="#007AFF" />
-            </TouchableOpacity>
-            
-            <Text style={styles.quantity}>{cartQuantity}</Text>
-            
-            <TouchableOpacity style={styles.quantityButton} onPress={handleIncrement}>
-              <Ionicons name="add" size={16} color="#007AFF" />
-            </TouchableOpacity>
+          <View style={s.qtyControls}>
+            <TouchableOpacity style={s.qtyBtn} onPress={handleDecrement}><Ionicons name="remove" size={16} color={Colors.accent.primary} /></TouchableOpacity>
+            <Text style={s.qty}>{cartQuantity}</Text>
+            <TouchableOpacity style={s.qtyBtn} onPress={handleIncrement}><Ionicons name="add" size={16} color={Colors.accent.primary} /></TouchableOpacity>
           </View>
         )}
       </View>
@@ -87,131 +62,30 @@ const MenuItem: React.FC<MenuItemProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    margin: 8,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  unavailable: {
-    opacity: 0.6,
-  },
-  content: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  info: {
-    flex: 1,
-    paddingRight: 12,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    flex: 1,
-  },
-  expressTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FF5722',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  expressText: {
-    fontSize: 10,
-    color: '#fff',
-    fontWeight: 'bold',
-    marginLeft: 2,
-  },
-  description: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-    lineHeight: 20,
-  },
-  details: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  price: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  prepTime: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  prepTimeText: {
-    fontSize: 12,
-    color: '#666',
-    marginLeft: 4,
-  },
-  image: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-  },
-  actions: {
-    alignItems: 'flex-end',
-  },
-  addButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  unavailableButton: {
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  unavailableText: {
-    color: '#999',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  quantityControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8f8f8',
-    borderRadius: 6,
-    paddingHorizontal: 4,
-  },
-  quantityButton: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  quantity: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginHorizontal: 12,
-    minWidth: 20,
-    textAlign: 'center',
-  },
+const s = StyleSheet.create({
+  container: { backgroundColor: Colors.background.card, borderRadius: Radius.lg, margin: 8, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.border.primary },
+  unavailable: { opacity: 0.5 },
+  content: { flexDirection: 'row', marginBottom: 12 },
+  info: { flex: 1, paddingRight: 12 },
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  name: { ...Typography.label, color: Colors.text.primary, flex: 1 },
+  expressTag: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F59E0B', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, gap: 2 },
+  expressText: { ...Typography.badge, color: '#fff', fontSize: 9 },
+  description: { ...Typography.bodySm, color: Colors.text.secondary, marginBottom: 8, lineHeight: 18 },
+  details: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  price: { ...Typography.price, color: Colors.accent.primary, fontSize: 16 },
+  prepTime: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  prepTimeText: { ...Typography.caption, color: Colors.text.tertiary },
+  image: { width: 72, height: 72, borderRadius: Radius.md, backgroundColor: Colors.background.tertiary },
+  actions: { alignItems: 'flex-end' },
+  addBtn: { borderRadius: Radius.sm, overflow: 'hidden' },
+  addBtnGrad: { paddingHorizontal: 22, paddingVertical: 8, borderRadius: Radius.sm },
+  addBtnText: { ...Typography.label, color: Colors.background.primary, fontSize: 13 },
+  unavailableBtn: { backgroundColor: Colors.background.tertiary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.sm },
+  unavailableText: { ...Typography.caption, color: Colors.text.tertiary, fontWeight: '500' },
+  qtyControls: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.background.tertiary, borderRadius: Radius.sm, borderWidth: 1, borderColor: Colors.border.gold },
+  qtyBtn: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
+  qty: { ...Typography.label, color: Colors.text.primary, marginHorizontal: 10, minWidth: 18, textAlign: 'center' },
 });
 
 export default MenuItem;

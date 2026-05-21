@@ -7,7 +7,7 @@ const Stack = createNativeStackNavigator();
 
 const MenuStackNavigator: React.FC = () => {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator id="MenuStack" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MenuScreen" component={MenuScreen} />
     </Stack.Navigator>
   );

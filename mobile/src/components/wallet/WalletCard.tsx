@@ -16,7 +16,7 @@ const WalletCard: React.FC<WalletCardProps> = ({
   onTopUp,
   onViewTransactions,
 }) => {
-  const gradientColors = userType === 'premium' 
+  const gradientColors: [string, string] = userType === 'premium' 
     ? ['#FFD700', '#FFA500'] 
     : ['#007AFF', '#0051D5'];
 

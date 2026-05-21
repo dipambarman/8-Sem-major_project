@@ -8,9 +8,9 @@ import {
   FlatList,
   Image,
   RefreshControl,
-  Dimensions,
   StatusBar,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
@@ -21,17 +21,20 @@ import { addToCart } from '../../store/slices/cartSlice';
 import { menuApi } from '../../services/api/menuApi';
 import { orderApi } from '../../services/api/orderApi';
 import { MenuItem } from '../../types/api';
+import { Colors, Radius, Spacing } from '../../theme/colors';
+import { Typography } from '../../theme/typography';
+import HeroBanner from '../../components/home/HeroBanner';
+import LoyaltyCardWidget from '../../components/home/LoyaltyCardWidget';
 
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = width * 0.42;
+
 
 const CATEGORIES = [
-  { id: 'all', label: 'All', icon: 'grid' as const, color: '#007AFF' },
-  { id: 'Beverages', label: 'Drinks', icon: 'cafe' as const, color: '#FF6B35' },
-  { id: 'Snacks', label: 'Snacks', icon: 'fast-food' as const, color: '#4CAF50' },
-  { id: 'Main Course', label: 'Meals', icon: 'restaurant' as const, color: '#9C27B0' },
-  { id: 'Desserts', label: 'Desserts', icon: 'ice-cream' as const, color: '#E91E63' },
-  { id: 'Breakfast', label: 'Breakfast', icon: 'sunny' as const, color: '#FF9800' },
+  { id: 'all', label: 'All', icon: 'grid' as const, color: Colors.accent.primary },
+  { id: 'Beverages', label: 'Drinks', icon: 'cafe' as const, color: '#F59E0B' },
+  { id: 'Snacks', label: 'Snacks', icon: 'fast-food' as const, color: '#10B981' },
+  { id: 'Main Course', label: 'Meals', icon: 'restaurant' as const, color: '#8B5CF6' },
+  { id: 'Desserts', label: 'Desserts', icon: 'ice-cream' as const, color: '#EC4899' },
+  { id: 'Breakfast', label: 'Breakfast', icon: 'sunny' as const, color: '#F97316' },
 ];
 
 const HomeScreen: React.FC = () => {
@@ -41,6 +44,10 @@ const HomeScreen: React.FC = () => {
   const { wallet } = useSelector((state: RootState) => state.wallet);
   const cartItems = useSelector((state: RootState) => state.cart.items);
   const totalCartItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+  const CARD_WIDTH = isTablet ? 220 : width * 0.42;
 
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,12 +104,20 @@ const HomeScreen: React.FC = () => {
     dispatch(addToCart({ ...item, quantity: 1 }));
   };
 
+  const handleBannerNavigate = (route: string) => {
+    (navigation as any).navigate(route);
+  };
+
+  // Mock total spent (in production, fetch from backend)
+  const totalSpent = (user as any)?.totalSpent || recentOrderCount * 250;
+  const loyaltyTier = totalSpent >= 25000 ? 'platinum' : totalSpent >= 15000 ? 'gold' : totalSpent >= 5000 ? 'silver' : 'none';
+
   // ─── RENDER COMPONENTS ────────────────────────────────────────────
 
   const renderHeader = () => (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
-        <Text style={styles.greeting}>{getGreeting()},</Text>
+        <Text style={styles.greeting}>{getGreeting()}</Text>
         <Text style={styles.userName}>{user?.fullName?.split(' ')[0] || 'Foodie'} 👋</Text>
       </View>
       <View style={styles.headerRight}>
@@ -110,14 +125,16 @@ const HomeScreen: React.FC = () => {
           style={styles.notificationBtn}
           onPress={() => (navigation as any).navigate('Profile', { screen: 'Notifications' })}
         >
-          <Ionicons name="notifications-outline" size={24} color="#333" />
+          <Ionicons name="notifications-outline" size={22} color={Colors.text.secondary} />
         </TouchableOpacity>
         {totalCartItems > 0 && (
           <TouchableOpacity
             style={styles.cartBtn}
             onPress={() => (navigation as any).navigate('Cart')}
           >
-            <Ionicons name="cart" size={24} color="#fff" />
+            <LinearGradient colors={Colors.gradients.goldCta} style={styles.cartBtnGradient}>
+              <Ionicons name="cart" size={20} color={Colors.background.primary} />
+            </LinearGradient>
             <View style={styles.cartBadge}>
               <Text style={styles.cartBadgeText}>{totalCartItems}</Text>
             </View>
@@ -133,9 +150,56 @@ const HomeScreen: React.FC = () => {
       onPress={() => (navigation as any).navigate('Search')}
       activeOpacity={0.7}
     >
-      <Ionicons name="search" size={20} color="#999" />
-      <Text style={styles.searchPlaceholder}>Search for dishes, drinks...</Text>
+      <Ionicons name="search" size={18} color={Colors.text.tertiary} />
+      <Text style={styles.searchPlaceholder}>Search dishes, drinks...</Text>
+      <View style={styles.searchFilter}>
+        <Ionicons name="options" size={16} color={Colors.accent.primary} />
+      </View>
     </TouchableOpacity>
+  );
+
+  const renderQuickActions = () => (
+    <View style={styles.quickActions}>
+      <TouchableOpacity
+        style={styles.quickActionBtn}
+        onPress={() => (navigation as any).navigate('Menu')}
+      >
+        <LinearGradient colors={['rgba(245, 158, 11, 0.15)', 'rgba(245, 158, 11, 0.05)']} style={styles.quickActionIcon}>
+          <Ionicons name="restaurant" size={22} color="#F59E0B" />
+        </LinearGradient>
+        <Text style={styles.quickActionLabel}>Menu</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.quickActionBtn}
+        onPress={() => (navigation as any).navigate('Profile', { screen: 'Premium' })}
+      >
+        <LinearGradient colors={['rgba(139, 92, 246, 0.15)', 'rgba(139, 92, 246, 0.05)']} style={styles.quickActionIcon}>
+          <Ionicons name="calendar" size={22} color="#8B5CF6" />
+        </LinearGradient>
+        <Text style={styles.quickActionLabel}>Reserve</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.quickActionBtn}
+        onPress={() => (navigation as any).navigate('Wallet')}
+      >
+        <LinearGradient colors={['rgba(16, 185, 129, 0.15)', 'rgba(16, 185, 129, 0.05)']} style={styles.quickActionIcon}>
+          <Ionicons name="wallet" size={22} color="#10B981" />
+        </LinearGradient>
+        <Text style={styles.quickActionLabel}>Wallet</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.quickActionBtn}
+        onPress={() => (navigation as any).navigate('Cart', { screen: 'OrderHistory' })}
+      >
+        <LinearGradient colors={['rgba(59, 130, 246, 0.15)', 'rgba(59, 130, 246, 0.05)']} style={styles.quickActionIcon}>
+          <Ionicons name="time" size={22} color="#3B82F6" />
+        </LinearGradient>
+        <Text style={styles.quickActionLabel}>Orders</Text>
+      </TouchableOpacity>
+    </View>
   );
 
   const renderQuickStats = () => (
@@ -144,8 +208,8 @@ const HomeScreen: React.FC = () => {
         style={styles.statCard}
         onPress={() => (navigation as any).navigate('Wallet')}
       >
-        <LinearGradient colors={['#007AFF', '#0056CC']} style={styles.statGradient}>
-          <Ionicons name="wallet" size={22} color="#fff" />
+        <LinearGradient colors={['#1E3A5F', '#162D4A']} style={styles.statGradient}>
+          <Ionicons name="wallet" size={20} color={Colors.accent.primary} />
           <Text style={styles.statValue}>₹{wallet?.balance?.toFixed(0) || '0'}</Text>
           <Text style={styles.statLabel}>Wallet</Text>
         </LinearGradient>
@@ -154,8 +218,8 @@ const HomeScreen: React.FC = () => {
         style={styles.statCard}
         onPress={() => (navigation as any).navigate('Cart', { screen: 'OrderHistory' })}
       >
-        <LinearGradient colors={['#FF6B35', '#E55A2E']} style={styles.statGradient}>
-          <Ionicons name="receipt" size={22} color="#fff" />
+        <LinearGradient colors={['#2D1B4E', '#231540']} style={styles.statGradient}>
+          <Ionicons name="receipt" size={20} color="#A78BFA" />
           <Text style={styles.statValue}>{recentOrderCount}</Text>
           <Text style={styles.statLabel}>Orders</Text>
         </LinearGradient>
@@ -164,8 +228,8 @@ const HomeScreen: React.FC = () => {
         style={styles.statCard}
         onPress={() => (navigation as any).navigate('Profile', { screen: 'Premium' })}
       >
-        <LinearGradient colors={['#9C27B0', '#7B1FA2']} style={styles.statGradient}>
-          <Ionicons name="diamond" size={22} color="#fff" />
+        <LinearGradient colors={['#3D2E1C', '#2A1F12']} style={styles.statGradient}>
+          <Ionicons name="diamond" size={20} color={Colors.accent.primary} />
           <Text style={styles.statValue}>{user?.isPremium ? 'Active' : 'Free'}</Text>
           <Text style={styles.statLabel}>SmartPass</Text>
         </LinearGradient>
@@ -174,9 +238,9 @@ const HomeScreen: React.FC = () => {
   );
 
   const renderCategories = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Explore Categories</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesScroll}>
+    <View style={[styles.section, isTablet && styles.tabletSection]}>
+      <Text style={styles.sectionTitle}>Explore</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.categoriesScroll, isTablet && { justifyContent: 'center', flex: 1 }]}>
         {CATEGORIES.map((cat) => (
           <TouchableOpacity
             key={cat.id}
@@ -184,7 +248,7 @@ const HomeScreen: React.FC = () => {
             onPress={() => (navigation as any).navigate('Menu', { screen: 'MenuScreen', params: { category: cat.id } })}
           >
             <View style={[styles.categoryIcon, { backgroundColor: `${cat.color}15` }]}>
-              <Ionicons name={cat.icon} size={24} color={cat.color} />
+              <Ionicons name={cat.icon} size={22} color={cat.color} />
             </View>
             <Text style={styles.categoryLabel}>{cat.label}</Text>
           </TouchableOpacity>
@@ -195,7 +259,7 @@ const HomeScreen: React.FC = () => {
 
   const renderFoodCard = ({ item }: { item: MenuItem }) => (
     <TouchableOpacity
-      style={styles.foodCard}
+      style={[styles.foodCard, { width: CARD_WIDTH }]}
       activeOpacity={0.85}
       onPress={() => (navigation as any).navigate('Menu')}
     >
@@ -203,13 +267,13 @@ const HomeScreen: React.FC = () => {
         {item.image ? (
           <Image source={{ uri: item.image }} style={styles.foodImage} />
         ) : (
-          <LinearGradient colors={['#f0f0f0', '#e0e0e0']} style={styles.foodImagePlaceholder}>
-            <Ionicons name="restaurant" size={32} color="#ccc" />
+          <LinearGradient colors={[Colors.background.card, Colors.background.tertiary]} style={styles.foodImagePlaceholder}>
+            <Ionicons name="restaurant" size={30} color={Colors.text.tertiary} />
           </LinearGradient>
         )}
         {item.isExpress && (
           <View style={styles.expressBadge}>
-            <Ionicons name="flash" size={12} color="#fff" />
+            <Ionicons name="flash" size={10} color="#fff" />
             <Text style={styles.expressText}>EXPRESS</Text>
           </View>
         )}
@@ -223,7 +287,9 @@ const HomeScreen: React.FC = () => {
             style={styles.addBtn}
             onPress={() => handleAddToCart(item)}
           >
-            <Ionicons name="add" size={18} color="#fff" />
+            <LinearGradient colors={Colors.gradients.goldCta} style={styles.addBtnGradient}>
+              <Ionicons name="add" size={16} color={Colors.background.primary} />
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </View>
@@ -269,73 +335,35 @@ const HomeScreen: React.FC = () => {
     );
   };
 
-  const renderPromoCard = () => (
+  const renderDineInCta = () => (
     <TouchableOpacity
-      style={styles.promoCard}
-      activeOpacity={0.85}
+      style={styles.dineInCard}
+      activeOpacity={0.9}
       onPress={() => (navigation as any).navigate('Profile', { screen: 'Premium' })}
     >
       <LinearGradient
-        colors={['#FF6B35', '#FF8C5A']}
+        colors={Colors.gradients.dineIn}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.promoGradient}
+        style={styles.dineInGradient}
       >
-        <View style={styles.promoContent}>
-          <View style={styles.promoTextContainer}>
-            <Text style={styles.promoTitle}>Get SmartPass 🚀</Text>
-            <Text style={styles.promoDescription}>
-              Skip the queue with Express ordering{'\n'}+ Free delivery on all orders
+        <View style={styles.dineInContent}>
+          <View style={styles.dineInText}>
+            <Text style={styles.dineInTitle}>Dine-In Experience</Text>
+            <Text style={styles.dineInSubtitle}>
+              Reserve a premium table and enjoy{'\n'}our signature dining ambiance
             </Text>
-            <View style={styles.promoButton}>
-              <Text style={styles.promoButtonText}>Explore Plans</Text>
+            <View style={styles.dineInButton}>
+              <Text style={styles.dineInButtonText}>Reserve Table</Text>
+              <Ionicons name="arrow-forward" size={14} color="#fff" />
             </View>
           </View>
-          <Ionicons name="diamond" size={64} color="rgba(255,255,255,0.3)" />
+          <View style={styles.dineInIconBox}>
+            <Ionicons name="restaurant" size={56} color="rgba(255,255,255,0.15)" />
+          </View>
         </View>
       </LinearGradient>
     </TouchableOpacity>
-  );
-
-  const renderQuickActions = () => (
-    <View style={styles.quickActions}>
-      <TouchableOpacity
-        style={styles.quickActionBtn}
-        onPress={() => (navigation as any).navigate('Menu')}
-      >
-        <View style={[styles.quickActionIcon, { backgroundColor: '#E8F5E9' }]}>
-          <Ionicons name="restaurant" size={24} color="#4CAF50" />
-        </View>
-        <Text style={styles.quickActionLabel}>Browse{'\n'}Menu</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.quickActionBtn}
-        onPress={() => (navigation as any).navigate('Cart')}
-      >
-        <View style={[styles.quickActionIcon, { backgroundColor: '#E3F2FD' }]}>
-          <Ionicons name="cart" size={24} color="#1976D2" />
-        </View>
-        <Text style={styles.quickActionLabel}>View{'\n'}Cart</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.quickActionBtn}
-        onPress={() => (navigation as any).navigate('Cart', { screen: 'OrderHistory' })}
-      >
-        <View style={[styles.quickActionIcon, { backgroundColor: '#FFF3E0' }]}>
-          <Ionicons name="time" size={24} color="#FF9800" />
-        </View>
-        <Text style={styles.quickActionLabel}>Order{'\n'}History</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.quickActionBtn}
-        onPress={() => (navigation as any).navigate('Wallet')}
-      >
-        <View style={[styles.quickActionIcon, { backgroundColor: '#F3E5F5' }]}>
-          <Ionicons name="wallet" size={24} color="#9C27B0" />
-        </View>
-        <Text style={styles.quickActionLabel}>Top Up{'\n'}Wallet</Text>
-      </TouchableOpacity>
-    </View>
   );
 
   // ─── MAIN RENDER ──────────────────────────────────────────────────
@@ -343,7 +371,7 @@ const HomeScreen: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={Colors.accent.primary} />
         <Text style={styles.loadingText}>Loading your canteen...</Text>
       </View>
     );
@@ -351,19 +379,49 @@ const HomeScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="light-content" backgroundColor={Colors.background.primary} />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.accent.primary}
+            colors={[Colors.accent.primary]}
+          />
+        }
+        contentContainerStyle={[styles.scrollContent, isTablet && { alignSelf: 'center', width: '100%', maxWidth: 1024 }]}
       >
         {renderHeader()}
         {renderSearchBar()}
-        {renderQuickStats()}
-        {renderPromoCard()}
+
+        <View style={isTablet && styles.tabletRow}>
+          <View style={isTablet && { flex: 1 }}>
+            {/* Loyalty Card Widget */}
+            <LoyaltyCardWidget
+              totalSpent={totalSpent}
+              tier={loyaltyTier as any}
+              userName={user?.fullName || 'Member'}
+              onPress={() => (navigation as any).navigate('Profile', { screen: 'Premium' })}
+            />
+          </View>
+          <View style={isTablet && { flex: 1 }}>
+            <HeroBanner onNavigate={handleBannerNavigate} />
+          </View>
+        </View>
+
+        <View style={isTablet && styles.tabletRow}>
+          <View style={isTablet && { flex: 1 }}>
+            {renderQuickActions()}
+          </View>
+          <View style={isTablet && { flex: 1 }}>
+            {renderQuickStats()}
+          </View>
+        </View>
+
         {renderCategories()}
-        {renderQuickActions()}
         {renderTrendingSection()}
+        {renderDineInCta()}
         {renderExpressSection()}
 
         {/* Bottom Padding */}
@@ -378,21 +436,31 @@ const HomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: Colors.background.primary,
   },
   scrollContent: {
     paddingBottom: 20,
+  },
+  tabletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: Spacing.xl,
+    gap: Spacing.xl,
+    marginTop: Spacing.md,
+  },
+  tabletSection: {
+    paddingHorizontal: Spacing.xl,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: Colors.background.primary,
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
-    color: '#666',
+    ...Typography.body,
+    color: Colors.text.secondary,
   },
 
   // Header
@@ -400,22 +468,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.xl,
     paddingTop: 56,
     paddingBottom: 8,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.background.primary,
   },
   headerLeft: {},
   greeting: {
-    fontSize: 14,
-    color: '#888',
+    ...Typography.bodySm,
+    color: Colors.text.secondary,
     fontWeight: '500',
   },
   userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
+    ...Typography.h2,
+    color: Colors.text.primary,
     marginTop: 2,
+    fontSize: 24,
   },
   headerRight: {
     flexDirection: 'row',
@@ -426,31 +494,34 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: Colors.background.tertiary,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border.primary,
   },
   cartBtn: {
+    position: 'relative',
+  },
+  cartBtnGradient: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'relative',
   },
   cartBadge: {
     position: 'absolute',
     top: -4,
     right: -4,
-    backgroundColor: '#FF3B30',
+    backgroundColor: Colors.status.error,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: Colors.background.primary,
   },
   cartBadgeText: {
     color: '#fff',
@@ -462,135 +533,121 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 20,
-    marginTop: 16,
-    paddingHorizontal: 16,
+    marginHorizontal: Spacing.xl,
+    marginTop: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
     paddingVertical: 14,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 14,
+    backgroundColor: Colors.background.tertiary,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border.primary,
     gap: 10,
   },
   searchPlaceholder: {
-    fontSize: 15,
-    color: '#999',
+    ...Typography.body,
+    color: Colors.text.tertiary,
     flex: 1,
+  },
+  searchFilter: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: Colors.accent.muted,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Quick Actions
+  quickActions: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.xl,
+    marginTop: Spacing.xxl,
+    gap: 12,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  quickActionBtn: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  quickActionIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: Radius.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  quickActionLabel: {
+    ...Typography.caption,
+    color: Colors.text.secondary,
+    fontWeight: '600',
   },
 
   // Quick Stats
   statsRow: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginTop: 20,
+    paddingHorizontal: Spacing.xl,
+    marginTop: Spacing.xl,
     gap: 10,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
   },
   statCard: {
     flex: 1,
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: Colors.border.primary,
   },
   statGradient: {
-    padding: 16,
+    padding: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 100,
+    minHeight: 90,
   },
   statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginTop: 8,
+    ...Typography.h4,
+    color: Colors.text.primary,
+    marginTop: 6,
+    fontWeight: '800',
   },
   statLabel: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.8)',
+    ...Typography.caption,
+    color: Colors.text.secondary,
     marginTop: 2,
     fontWeight: '500',
   },
 
-  // Promo
-  promoCard: {
-    marginHorizontal: 20,
-    marginTop: 20,
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#FF6B35',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  promoGradient: {
-    padding: 24,
-  },
-  promoContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  promoTextContainer: {
-    flex: 1,
-    marginRight: 16,
-  },
-  promoTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  promoDescription: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.9)',
-    marginTop: 8,
-    lineHeight: 20,
-  },
-  promoButton: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 25,
-    alignSelf: 'flex-start',
-    marginTop: 14,
-  },
-  promoButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-
   // Categories
   section: {
-    marginTop: 24,
+    marginTop: Spacing.xxl,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.xl,
     marginBottom: 14,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    paddingHorizontal: 20,
+    ...Typography.h4,
+    color: Colors.text.primary,
+    paddingHorizontal: Spacing.xl,
     marginBottom: 14,
   },
   sectionSubtitle: {
-    fontSize: 13,
-    color: '#888',
-    paddingHorizontal: 20,
+    ...Typography.bodySm,
+    color: Colors.text.secondary,
+    paddingHorizontal: Spacing.xl,
   },
   seeAll: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '600',
+    ...Typography.label,
+    color: Colors.accent.primary,
+    fontSize: 13,
   },
   categoriesScroll: {
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.xl,
     gap: 16,
   },
   categoryChip: {
@@ -598,71 +655,92 @@ const styles = StyleSheet.create({
     width: 72,
   },
   categoryIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    width: 52,
+    height: 52,
+    borderRadius: Radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: Colors.border.primary,
   },
   categoryLabel: {
-    fontSize: 12,
-    color: '#555',
+    ...Typography.caption,
+    color: Colors.text.secondary,
     fontWeight: '600',
     textAlign: 'center',
   },
 
-  // Quick Actions
-  quickActions: {
+  // Dine In CTA
+  dineInCard: {
+    marginHorizontal: Spacing.xl,
+    marginTop: Spacing.xxl,
+    borderRadius: Radius.xl,
+    overflow: 'hidden',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  dineInGradient: {
+    padding: Spacing.xxl,
+  },
+  dineInContent: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginTop: 24,
-    gap: 12,
-  },
-  quickActionBtn: {
-    flex: 1,
     alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 14,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    justifyContent: 'space-between',
   },
-  quickActionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+  dineInText: {
+    flex: 1,
+    marginRight: Spacing.lg,
+  },
+  dineInTitle: {
+    ...Typography.h3,
+    color: '#fff',
+    fontSize: 20,
+  },
+  dineInSubtitle: {
+    ...Typography.bodySm,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 6,
+    lineHeight: 20,
+  },
+  dineInButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: Radius.pill,
+    marginTop: 14,
+    gap: 6,
+  },
+  dineInButtonText: {
+    ...Typography.label,
+    color: '#fff',
+    fontSize: 13,
+  },
+  dineInIconBox: {
+    width: 64,
+    height: 64,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  quickActionLabel: {
-    fontSize: 11,
-    color: '#555',
-    fontWeight: '600',
-    textAlign: 'center',
-    lineHeight: 15,
   },
 
   // Food Cards
   horizontalList: {
-    paddingLeft: 20,
+    paddingLeft: Spacing.xl,
     paddingRight: 8,
     gap: 14,
   },
   foodCard: {
-    width: CARD_WIDTH,
-    backgroundColor: '#fff',
-    borderRadius: 18,
+    backgroundColor: Colors.background.card,
+    borderRadius: Radius.card,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: Colors.border.primary,
   },
   foodImageContainer: {
     height: 130,
@@ -685,28 +763,27 @@ const styles = StyleSheet.create({
     left: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#F59E0B',
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
     gap: 3,
   },
   expressText: {
+    ...Typography.badge,
     color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
   },
   foodInfo: {
     padding: 12,
   },
   foodName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    ...Typography.label,
+    color: Colors.text.primary,
+    fontSize: 14,
   },
   foodCategory: {
-    fontSize: 12,
-    color: '#999',
+    ...Typography.caption,
+    color: Colors.text.tertiary,
     marginTop: 3,
   },
   foodBottom: {
@@ -716,15 +793,18 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   foodPrice: {
-    fontSize: 17,
-    fontWeight: 'bold',
-    color: '#007AFF',
+    ...Typography.price,
+    color: Colors.accent.primary,
+    fontSize: 16,
   },
   addBtn: {
-    width: 32,
-    height: 32,
     borderRadius: 10,
-    backgroundColor: '#007AFF',
+    overflow: 'hidden',
+  },
+  addBtnGradient: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },

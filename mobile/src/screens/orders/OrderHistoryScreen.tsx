@@ -1,325 +1,136 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  Modal,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, Alert, StatusBar, useWindowDimensions } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { RootState, AppDispatch } from '../../store/store';
 import { fetchOrders } from '../../store/slices/orderSlice';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import QRScanner from '../../components/common/QRScanner';
 import { Order } from '../../types/api';
-import { HomeStackParamList } from '../../types/navigation';
+import { Colors, Radius, Spacing } from '../../theme/colors';
+import { Typography } from '../../theme/typography';
 
 const OrderHistoryScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const dispatch = useDispatch<AppDispatch>();
-
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
   const { orders, isLoading } = useSelector((state: RootState) => state.order);
   const [refreshing, setRefreshing] = useState(false);
   const [qrModal, setQrModal] = useState(false);
 
-  useEffect(() => {
-    dispatch(fetchOrders());
-  }, [dispatch]);
+  useEffect(() => { dispatch(fetchOrders()); }, [dispatch]);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await dispatch(fetchOrders());
-    setRefreshing(false);
-  };
+  const onRefresh = async () => { setRefreshing(true); await dispatch(fetchOrders()); setRefreshing(false); };
 
-  // Handle what happens when QR data is scanned
   const handleScan = (data: string) => {
     setQrModal(false);
-
-    // Example: parse QR and navigate
     try {
-      // Expecting QR code to be a JSON string with { type, value }
       const result = JSON.parse(data);
-
-      if (result.type === 'order') {
-        navigation.navigate('OrderTracking', { orderId: result.value });
-      } else if (result.type === 'coupon') {
-        Alert.alert('Coupon Scanned!', `Code: ${result.value}`);
-      } else {
-        Alert.alert('Unknown QR Code', data);
-      }
-    } catch {
-      Alert.alert('Scanned', data); // fallback for raw text QR codes
-    }
+      if (result.type === 'order') navigation.navigate('OrderTracking', { orderId: result.value });
+      else if (result.type === 'coupon') Alert.alert('Coupon Scanned!', `Code: ${result.value}`);
+      else Alert.alert('Unknown QR Code', data);
+    } catch { Alert.alert('Scanned', data); }
   };
 
-  const getStatusColor = (status: string) => {
-    const colors = {
-      pending: '#FF9500',
-      confirmed: '#007AFF',
-      preparing: '#34C759',
-      ready: '#00C7BE',
-      completed: '#34C759',
-      cancelled: '#FF3B30',
+  const getStatusConfig = (status: string) => {
+    const configs: Record<string, { color: string; bg: string; icon: string }> = {
+      pending: { color: '#F59E0B', bg: 'rgba(245,158,11,0.12)', icon: 'time' },
+      confirmed: { color: '#3B82F6', bg: 'rgba(59,130,246,0.12)', icon: 'checkmark-circle' },
+      preparing: { color: '#10B981', bg: 'rgba(16,185,129,0.12)', icon: 'restaurant' },
+      ready: { color: '#06B6D4', bg: 'rgba(6,182,212,0.12)', icon: 'bag-check' },
+      completed: { color: '#10B981', bg: 'rgba(16,185,129,0.12)', icon: 'checkmark-done-circle' },
+      cancelled: { color: '#EF4444', bg: 'rgba(239,68,68,0.12)', icon: 'close-circle' },
     };
-    return colors[status] || '#666';
+    return configs[status] || configs.pending;
   };
 
-  const getStatusIcon = (status: string) => {
-    const icons = {
-      pending: 'time',
-      confirmed: 'checkmark-circle',
-      preparing: 'restaurant',
-      ready: 'bag-check',
-      completed: 'checkmark-circle',
-      cancelled: 'close-circle',
-    };
-    return icons[status] || 'help-circle';
-  };
-
-  const renderOrder = ({ item }: { item: Order }) => (
-    <TouchableOpacity
-      style={styles.orderCard}
-      onPress={() => navigation.navigate('OrderTracking', { orderId: item.id })}
-    >
-      <View style={styles.orderHeader}>
-        <View>
-          <Text style={styles.orderId}>Order #{item.id}</Text>
-          <Text style={styles.orderDate}>
-            {new Date(item.createdAt).toLocaleDateString()} at{' '}
-            {new Date(item.createdAt).toLocaleTimeString()}
-          </Text>
+  const renderOrder = ({ item }: { item: Order }) => {
+    const sc = getStatusConfig(item.status);
+    return (
+      <TouchableOpacity style={s.card} onPress={() => navigation.navigate('OrderTracking', { orderId: item.id })}>
+        <View style={s.cardHeader}>
+          <View>
+            <Text style={s.orderId}>Order #{item.id.slice(-6)}</Text>
+            <Text style={s.orderDate}>{new Date(item.createdAt).toLocaleDateString()} • {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+          </View>
+          <View style={[s.statusBadge, { backgroundColor: sc.bg }]}>
+            <Ionicons name={sc.icon as any} size={12} color={sc.color} />
+            <Text style={[s.statusText, { color: sc.color }]}>{item.status.toUpperCase()}</Text>
+          </View>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-          <Ionicons name={getStatusIcon(item.status)} size={16} color="#fff" />
-          <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
+        <View style={s.cardBody}>
+          {item.items?.slice(0, 2).map((oi, i) => <Text key={i} style={s.itemText}>{oi.quantity}× {oi.menuItem.name}</Text>)}
+          {item.items?.length > 2 && <Text style={s.moreItems}>+{item.items.length - 2} more</Text>}
         </View>
-      </View>
-
-      <View style={styles.orderDetails}>
-        <View style={styles.orderItems}>
-          {item.items?.slice(0, 2).map((orderItem, index) => (
-            <Text key={index} style={styles.itemText}>
-              {orderItem.quantity}× {orderItem.menuItem.name}
-            </Text>
-          ))}
-          {item.items?.length > 2 && (
-            <Text style={styles.moreItems}>
-              +{item.items.length - 2} more items
-            </Text>
-          )}
+        <View style={s.cardFooter}>
+          <View style={s.orderTypeChip}>
+            <Ionicons name={item.orderType === 'delivery' ? 'bicycle' : item.orderType === 'pickup' ? 'bag' : 'restaurant'} size={14} color={Colors.text.secondary} />
+            <Text style={s.orderTypeText}>{item.orderType.replace('_', ' ')}</Text>
+          </View>
+          <Text style={s.orderTotal}>₹{item.totalAmount.toFixed(0)}</Text>
         </View>
-
-        <View style={styles.orderFooter}>
-          <Text style={styles.orderType}>
-            <Ionicons 
-              name={item.orderType === 'delivery' ? 'bicycle' : item.orderType === 'pickup' ? 'bag' : 'restaurant'} 
-              size={14} 
-            />
-            {' '}{item.orderType.replace('_', ' ')}
-          </Text>
-          <Text style={styles.orderTotal}>₹{item.totalAmount.toFixed(2)}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-
-  const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <Ionicons name="receipt-outline" size={64} color="#ccc" />
-      <Text style={styles.emptyTitle}>No Orders Yet</Text>
-      <Text style={styles.emptySubtitle}>
-        Your order history will appear here once you place your first order
-      </Text>
-      <TouchableOpacity
-        style={styles.browseButton}
-        onPress={() => navigation.navigate('MenuScreen')}
-      >
-        <Text style={styles.browseButtonText}>Browse Menu</Text>
       </TouchableOpacity>
-    </View>
-  );
+    );
+  };
 
-  if (isLoading && orders.length === 0) {
-    return <LoadingSpinner message="Loading order history..." />;
-  }
+  if (isLoading && orders.length === 0) return <View style={s.loading}><LoadingSpinner message="Loading orders..." /></View>;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.scanButton}
-          onPress={() => setQrModal(true)}
-        >
-          <Ionicons name="qr-code" size={24} color="#007AFF" />
-          <Text style={styles.scanButtonText}>Scan QR</Text>
+    <View style={s.container}>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.background.primary} />
+      <View style={[s.header, isTablet && { width: '100%', maxWidth: 800, alignSelf: 'center' }]}>
+        <Text style={s.title}>Order History</Text>
+        <TouchableOpacity style={s.scanBtn} onPress={() => setQrModal(true)}>
+          <Ionicons name="qr-code" size={20} color={Colors.accent.primary} />
         </TouchableOpacity>
       </View>
-
-      <FlatList
-        data={orders}
-        keyExtractor={(item) => item.id}
-        renderItem={renderOrder}
-        contentContainerStyle={orders.length === 0 ? styles.emptyContainer : styles.listContainer}
-        ListEmptyComponent={renderEmptyState}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      <View style={[isTablet && { width: '100%', maxWidth: 800, alignSelf: 'center', flex: 1 }]}>
+      <FlatList data={orders} keyExtractor={i => i.id} renderItem={renderOrder}
+        contentContainerStyle={orders.length === 0 ? s.emptyWrap : s.list}
+        ListEmptyComponent={
+          <View style={s.empty}>
+            <View style={s.emptyIcon}><Ionicons name="receipt-outline" size={48} color={Colors.text.tertiary} /></View>
+            <Text style={s.emptyTitle}>No Orders Yet</Text>
+            <Text style={s.emptySub}>Place your first order to see it here</Text>
+          </View>
         }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent.primary} colors={[Colors.accent.primary]} />}
         showsVerticalScrollIndicator={false}
-      />
-
-      <Modal visible={qrModal} animationType="slide">
-        <QRScanner
-          visible={qrModal}
-          onScan={handleScan}
-          onCancel={() => setQrModal(false)}
         />
-      </Modal>
+      </View>
+      <Modal visible={qrModal} animationType="slide"><QRScanner visible={qrModal} onScan={handleScan} onCancel={() => setQrModal(false)} /></Modal>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    padding: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  scanButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f8ff',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  scanButtonText: {
-    color: '#007AFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  listContainer: {
-    padding: 16,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  orderCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  orderHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  orderId: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  orderDate: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginLeft: 4,
-  },
-  orderDetails: {
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    paddingTop: 12,
-  },
-  orderItems: {
-    marginBottom: 12,
-  },
-  itemText: {
-    fontSize: 14,
-    color: '#333',
-    marginBottom: 2,
-  },
-  moreItems: {
-    fontSize: 14,
-    color: '#666',
-    fontStyle: 'italic',
-  },
-  orderFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  orderType: {
-    fontSize: 14,
-    color: '#666',
-    textTransform: 'capitalize',
-  },
-  orderTotal: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#007AFF',
-  },
-  emptyState: {
-    alignItems: 'center',
-    padding: 40,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 24,
-  },
-  browseButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  browseButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.background.primary },
+  loading: { flex: 1, backgroundColor: Colors.background.primary },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.xl, paddingTop: 56, paddingBottom: Spacing.lg },
+  title: { ...Typography.h2, color: Colors.text.primary },
+  scanBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.accent.muted, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: Colors.border.gold },
+  list: { padding: Spacing.lg },
+  emptyWrap: { flex: 1, justifyContent: 'center' },
+  card: { backgroundColor: Colors.background.card, borderRadius: Radius.lg, padding: Spacing.lg, marginBottom: Spacing.md, borderWidth: 1, borderColor: Colors.border.primary },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: Spacing.md },
+  orderId: { ...Typography.label, color: Colors.text.primary },
+  orderDate: { ...Typography.caption, color: Colors.text.tertiary, marginTop: 2 },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.pill, gap: 4 },
+  statusText: { ...Typography.badge, fontSize: 9 },
+  cardBody: { paddingBottom: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.border.secondary },
+  itemText: { ...Typography.body, color: Colors.text.secondary, marginBottom: 2 },
+  moreItems: { ...Typography.caption, color: Colors.text.tertiary, fontStyle: 'italic', marginTop: 2 },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: Spacing.md },
+  orderTypeChip: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  orderTypeText: { ...Typography.caption, color: Colors.text.secondary, textTransform: 'capitalize' },
+  orderTotal: { ...Typography.price, color: Colors.accent.primary },
+  empty: { alignItems: 'center', padding: 40 },
+  emptyIcon: { width: 80, height: 80, borderRadius: 40, backgroundColor: Colors.background.tertiary, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  emptyTitle: { ...Typography.h3, color: Colors.text.primary, marginBottom: 8 },
+  emptySub: { ...Typography.body, color: Colors.text.secondary, textAlign: 'center' },
 });
 
 export default OrderHistoryScreen;

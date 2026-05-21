@@ -7,15 +7,20 @@ import {
   Alert,
   TouchableOpacity,
   RefreshControl,
+  StatusBar,
+  useWindowDimensions,
 } from 'react-native';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import MenuItem from '../../components/orders/MenuItem';
 import { MenuItem as MenuItemType } from '../../types/api';
 import { RootState } from '../../store/store';
 import { addToCart } from '../../store/slices/cartSlice';
 import { menuApi } from '../../services/api/menuApi';
+import { Colors, Radius, Spacing } from '../../theme/colors';
+import { Typography } from '../../theme/typography';
 
 const MenuScreen: React.FC = () => {
   const route = useRoute<RouteProp<{ params: { vendorId?: string } }, 'params'>>();
@@ -30,6 +35,10 @@ const MenuScreen: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  const { width } = useWindowDimensions();
+  // Responsive columns: < 768px -> 1 col, 768px-1024px -> 2 cols, > 1024px -> 3 cols
+  const numColumns = width >= 1024 ? 3 : width >= 768 ? 2 : 1;
 
   useEffect(() => {
     fetchMenu();
@@ -101,17 +110,22 @@ const MenuScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.background.primary} />
+
       <View style={styles.header}>
-        <Text style={styles.title}>Menu</Text>
+        <Text style={styles.title}>Our Menu</Text>
+        <Text style={styles.subtitle}>Curated dishes for you</Text>
         {totalCartItems > 0 && (
           <TouchableOpacity
             style={styles.cartButton}
             onPress={() => navigation.navigate('Cart' as never)}
           >
-            <Ionicons name="basket" size={24} color="#fff" />
-            <View style={styles.cartBadge}>
-              <Text style={styles.cartBadgeText}>{totalCartItems}</Text>
-            </View>
+            <LinearGradient colors={Colors.gradients.goldCta} style={styles.cartButtonGradient}>
+              <Ionicons name="basket" size={20} color={Colors.background.primary} />
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{totalCartItems}</Text>
+              </View>
+            </LinearGradient>
           </TouchableOpacity>
         )}
       </View>
@@ -127,22 +141,35 @@ const MenuScreen: React.FC = () => {
       />
 
       <FlatList
+        key={numColumns} // Force re-render when numColumns changes
         data={filteredItems}
         keyExtractor={(item) => item.id}
+        numColumns={numColumns}
         renderItem={({ item }) => (
-          <MenuItem
-            item={item}
-            onAddToCart={handleAddToCart}
-            cartQuantity={getCartQuantity(item.id)}
-          />
+          <View style={{ flex: 1, maxWidth: numColumns > 1 ? `${100 / numColumns}%` : '100%' }}>
+            <MenuItem
+              item={item}
+              onAddToCart={handleAddToCart}
+              cartQuantity={getCartQuantity(item.id)}
+            />
+          </View>
         )}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={[
+          { paddingBottom: 100 },
+          numColumns > 1 && { paddingHorizontal: Spacing.md }
+        ]}
+        columnWrapperStyle={numColumns > 1 ? { justifyContent: 'flex-start' } : undefined}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.accent.primary}
+            colors={[Colors.accent.primary]}
+          />
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Ionicons name="restaurant-outline" size={64} color="#ccc" />
+            <Ionicons name="restaurant-outline" size={64} color={Colors.text.tertiary} />
             <Text style={styles.emptyText}>
               {loading ? 'Loading menu...' : 'No items available'}
             </Text>
@@ -156,72 +183,84 @@ const MenuScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.background.primary,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingHorizontal: Spacing.xl,
+    paddingTop: 56,
+    paddingBottom: Spacing.lg,
+    backgroundColor: Colors.background.primary,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    ...Typography.h2,
+    color: Colors.text.primary,
+  },
+  subtitle: {
+    ...Typography.bodySm,
+    color: Colors.text.secondary,
+    marginTop: 4,
   },
   cartButton: {
-    backgroundColor: '#007AFF',
+    position: 'absolute',
+    top: 56,
+    right: Spacing.xl,
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  cartButtonGradient: {
     width: 48,
     height: 48,
     borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'relative',
   },
   cartBadge: {
     position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: '#ff4444',
+    top: -4,
+    right: -4,
+    backgroundColor: Colors.status.error,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Colors.background.primary,
   },
   cartBadgeText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 'bold',
   },
   categoryContainer: {
-    maxHeight: 60,
+    maxHeight: 56,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: Colors.border.primary,
   },
   categoryFilters: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: 10,
     gap: 8,
   },
   categoryButton: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#f0f0f0',
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.background.tertiary,
+    borderWidth: 1,
+    borderColor: Colors.border.primary,
   },
   selectedCategoryButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: Colors.accent.primary,
+    borderColor: Colors.accent.primary,
   },
   categoryButtonText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
+    ...Typography.label,
+    color: Colors.text.secondary,
+    fontSize: 13,
   },
   selectedCategoryButtonText: {
-    color: '#fff',
+    color: Colors.background.primary,
   },
   emptyState: {
     flex: 1,
@@ -230,8 +269,8 @@ const styles = StyleSheet.create({
     paddingTop: 100,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#666',
+    ...Typography.body,
+    color: Colors.text.secondary,
     marginTop: 16,
   },
 });
