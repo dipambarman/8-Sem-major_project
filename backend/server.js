@@ -101,6 +101,9 @@ async function startServer() {
   });
 }
 
-startServer();
+// Only start server in local development, not on Vercel
+if (process.env.VERCEL === undefined) {
+  startServer();
+}
 
 export { app, server, io, socketManager };
