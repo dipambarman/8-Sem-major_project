@@ -106,4 +106,5 @@ if (process.env.VERCEL === undefined) {
   startServer();
 }
 
+export default app;
 export { app, server, io, socketManager };
