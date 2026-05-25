@@ -55,7 +55,8 @@ apiClient.interceptors.request.use(async (config) => {
     config.headers['Bypass-Tunnel-Reminder'] = 'true';
   }
   
-  console.log(`🔵 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+  const fullUrl = `${config.baseURL || ''}${config.url || ''}`;
+  console.log(`🔵 API Request: ${config.method?.toUpperCase()} ${fullUrl}`);
   if (config.data) {
     console.log('📤 Request Data:', JSON.stringify(config.data, null, 2));
   }
@@ -78,7 +79,8 @@ apiClient.interceptors.response.use(
     } else if (error.request) {
       // Request made but no response
       console.error('🔴 No response received from server');
-      console.error('📤 Request made to:', error.config.url);
+      const fullUrl = `${error.config?.baseURL || ''}${error.config?.url || ''}`;
+      console.error('📤 Request made to:', fullUrl);
       console.error('❌ Network Error Details:', error.message);
     } else {
       // Error in request setup
