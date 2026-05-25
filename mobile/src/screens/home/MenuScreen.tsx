@@ -40,6 +40,25 @@ const MenuScreen: React.FC = () => {
   // Responsive columns: < 768px -> 1 col, 768px-1024px -> 2 cols, > 1024px -> 3 cols
   const numColumns = width >= 1024 ? 3 : width >= 768 ? 2 : 1;
 
+  // Category display mapping from database format (UPPERCASE) to UI format (Title Case)
+  const categoryDisplayMap: Record<string, string> = {
+    'BREAKFAST': 'Breakfast',
+    'SNACKS': 'Snacks',
+    'MAIN_COURSE': 'Main Course',
+    'DESSERTS': 'Desserts',
+    'BEVERAGES': 'Beverages',
+  };
+
+  // Reverse mapping for filtering
+  const displayToDatabaseMap: Record<string, string> = {
+    'All': 'All',
+    'Breakfast': 'BREAKFAST',
+    'Snacks': 'SNACKS',
+    'Main Course': 'MAIN_COURSE',
+    'Desserts': 'DESSERTS',
+    'Beverages': 'BEVERAGES',
+  };
+
   useEffect(() => {
     fetchMenu();
   }, [vendorId]);
@@ -51,8 +70,14 @@ const MenuScreen: React.FC = () => {
       if (response.success) {
         const items = response.data;
         setMenuItems(items);
-        const uniqueCategories = ['All', ...new Set(items.map(item => item.category))] as string[];
-        setCategories(uniqueCategories);
+        // Extract unique categories from items and convert to display names
+        const uniqueDatabaseCategories = new Set(items.map((item: MenuItemType) => item.category));
+        const displayCategories = Array.from(uniqueDatabaseCategories).map(
+          (cat: string) => categoryDisplayMap[cat] || cat
+        );
+        const sortedCategories = ['All', ...displayCategories.sort()];
+        setCategories(sortedCategories as string[]);
+        setSelectedCategory('All');
       }
     } catch (error) {
       console.error('Fetch menu error:', error);
@@ -68,9 +93,10 @@ const MenuScreen: React.FC = () => {
     setRefreshing(false);
   };
 
+  // Filter items based on selected category (convert display name to database format for filtering)
   const filteredItems = selectedCategory === 'All'
     ? menuItems
-    : menuItems.filter(item => item.category === selectedCategory);
+    : menuItems.filter(item => item.category === displayToDatabaseMap[selectedCategory]);
 
   const handleAddToCart = (item: MenuItemType, quantity: number) => {
     if (quantity <= 0) {
@@ -186,38 +212,41 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background.primary,
   },
   header: {
-    paddingHorizontal: Spacing.xl,
-    paddingTop: 56,
-    paddingBottom: Spacing.lg,
+    paddingHorizontal: Spacing.md,
+    paddingTop: 48,
+    paddingBottom: Spacing.md,
     backgroundColor: Colors.background.primary,
   },
   title: {
     ...Typography.h2,
     color: Colors.text.primary,
+    fontSize: 24,
+    marginBottom: 4,
   },
   subtitle: {
     ...Typography.bodySm,
     color: Colors.text.secondary,
     marginTop: 4,
+    fontSize: 12,
   },
   cartButton: {
     position: 'absolute',
-    top: 56,
-    right: Spacing.xl,
+    top: 48,
+    right: Spacing.md,
     borderRadius: 24,
     overflow: 'hidden',
   },
   cartButtonGradient: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cartBadge: {
     position: 'absolute',
-    top: -4,
-    right: -4,
+    top: -6,
+    right: -6,
     backgroundColor: Colors.status.error,
     borderRadius: 10,
     minWidth: 20,
@@ -229,22 +258,22 @@ const styles = StyleSheet.create({
   },
   cartBadgeText: {
     color: '#fff',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 'bold',
   },
   categoryContainer: {
-    maxHeight: 56,
+    maxHeight: 52,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.primary,
   },
   categoryFilters: {
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: 10,
-    gap: 8,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 8,
+    gap: 6,
   },
   categoryButton: {
-    paddingHorizontal: 18,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: Radius.pill,
     backgroundColor: Colors.background.tertiary,
     borderWidth: 1,
@@ -257,7 +286,7 @@ const styles = StyleSheet.create({
   categoryButtonText: {
     ...Typography.label,
     color: Colors.text.secondary,
-    fontSize: 13,
+    fontSize: 12,
   },
   selectedCategoryButtonText: {
     color: Colors.background.primary,
@@ -266,12 +295,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 100,
+    paddingTop: 80,
   },
   emptyText: {
     ...Typography.body,
     color: Colors.text.secondary,
-    marginTop: 16,
+    marginTop: 12,
+    fontSize: 14,
   },
 });
 

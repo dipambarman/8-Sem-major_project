@@ -68,11 +68,11 @@ export const MenuEdit = () => (
             <SelectInput
                 source="category"
                 choices={[
-                    { id: 'Beverages', name: 'Beverages' },
-                    { id: 'Snacks', name: 'Snacks' },
-                    { id: 'Main Course', name: 'Main Course' },
-                    { id: 'Desserts', name: 'Desserts' },
-                    { id: 'Breakfast', name: 'Breakfast' },
+                    { id: 'BREAKFAST', name: 'Breakfast' },
+                    { id: 'SNACKS', name: 'Snacks' },
+                    { id: 'MAIN_COURSE', name: 'Main Course' },
+                    { id: 'DESSERTS', name: 'Desserts' },
+                    { id: 'BEVERAGES', name: 'Beverages' },
                 ]}
             />
             <NumberInput source="preparationTime" label="Preparation Time (minutes)" />
@@ -92,11 +92,11 @@ export const MenuCreate = () => (
             <SelectInput
                 source="category"
                 choices={[
-                    { id: 'Beverages', name: 'Beverages' },
-                    { id: 'Snacks', name: 'Snacks' },
-                    { id: 'Main Course', name: 'Main Course' },
-                    { id: 'Desserts', name: 'Desserts' },
-                    { id: 'Breakfast', name: 'Breakfast' },
+                    { id: 'BREAKFAST', name: 'Breakfast' },
+                    { id: 'SNACKS', name: 'Snacks' },
+                    { id: 'MAIN_COURSE', name: 'Main Course' },
+                    { id: 'DESSERTS', name: 'Desserts' },
+                    { id: 'BEVERAGES', name: 'Beverages' },
                 ]}
                 validate={required()}
             />

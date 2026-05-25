@@ -147,7 +147,7 @@ const HomeScreen: React.FC = () => {
   const renderSearchBar = () => (
     <TouchableOpacity
       style={styles.searchBar}
-      onPress={() => (navigation as any).navigate('Search')}
+      onPress={() => (navigation as any).navigate('SearchHome')}
       activeOpacity={0.7}
     >
       <Ionicons name="search" size={18} color={Colors.text.tertiary} />
@@ -402,7 +402,13 @@ const HomeScreen: React.FC = () => {
               totalSpent={totalSpent}
               tier={loyaltyTier as any}
               userName={user?.fullName || 'Member'}
-              onPress={() => (navigation as any).navigate('Profile', { screen: 'Premium' })}
+              onPress={() => {
+                try {
+                  (navigation as any).navigate('Wallet', { screen: 'TopUp' });
+                } catch (e) {
+                  (navigation as any).navigate('Wallet');
+                }
+              }}
             />
           </View>
           <View style={isTablet && { flex: 1 }}>

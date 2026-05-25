@@ -35,7 +35,7 @@ import { vendorApi } from '../services/api';
 
 const MenuPage = () => {
   const [menuItems, setMenuItems] = useState([]);
-  const [categories, setCategories] = useState(['Beverages', 'Snacks', 'Main Course', 'Desserts']);
+  const [categories, setCategories] = useState(['Breakfast', 'Snacks', 'Main Course', 'Desserts', 'Beverages']);
   const [editDialog, setEditDialog] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [formData, setFormData] = useState({
@@ -64,17 +64,31 @@ const MenuPage = () => {
 
   const handleSave = async () => {
     try {
+      // Convert display category to database format
+      const categoryMap = {
+        'Breakfast': 'BREAKFAST',
+        'Snacks': 'SNACKS',
+        'Main Course': 'MAIN_COURSE',
+        'Desserts': 'DESSERTS',
+        'Beverages': 'BEVERAGES',
+      };
+      
+      const dataToSave = {
+        ...formData,
+        category: categoryMap[formData.category] || formData.category,
+      };
+
       if (selectedItem) {
         // Update existing item
-        await vendorApi.updateMenuItem(selectedItem.id, formData);
+        await vendorApi.updateMenuItem(selectedItem.id, dataToSave);
         setMenuItems(prev =>
           prev.map(item =>
-            item.id === selectedItem.id ? { ...item, ...formData } : item
+            item.id === selectedItem.id ? { ...item, ...dataToSave } : item
           )
         );
       } else {
         // Create new item
-        const response = await vendorApi.createMenuItem(formData);
+        const response = await vendorApi.createMenuItem(dataToSave);
         setMenuItems(prev => [...prev, response.data.data]);
       }
       
@@ -110,13 +124,22 @@ const MenuPage = () => {
   };
 
   const handleOpenDialog = (item = null) => {
+    // Convert database categories to display format
+    const displayCategoryMap = {
+      'BREAKFAST': 'Breakfast',
+      'SNACKS': 'Snacks',
+      'MAIN_COURSE': 'Main Course',
+      'DESSERTS': 'Desserts',
+      'BEVERAGES': 'Beverages',
+    };
+
     setSelectedItem(item);
     if (item) {
       setFormData({
         name: item.name,
         description: item.description,
         price: item.price.toString(),
-        category: item.category,
+        category: displayCategoryMap[item.category] || item.category,
         preparationTime: item.preparationTime.toString(),
         isAvailable: item.isAvailable,
         isExpress: item.isExpress,
@@ -147,84 +170,143 @@ const MenuPage = () => {
   };
 
   return (
-    <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" fontWeight="bold">
+    <Box sx={{ p: { xs: 2, sm: 3 } }}>
+      {/* Header Section - Responsive Layout */}
+      <Box 
+        display="flex" 
+        justifyContent="space-between" 
+        alignItems={{ xs: 'flex-start', sm: 'center' }}
+        flexDirection={{ xs: 'column', sm: 'row' }}
+        gap={2}
+        mb={3}
+      >
+        <Typography variant="h4" fontWeight="bold" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
           Menu Management
         </Typography>
         <Button
           variant="contained"
           startIcon={<Add />}
           onClick={() => handleOpenDialog()}
+          sx={{ 
+            alignSelf: { xs: 'stretch', sm: 'auto' },
+            minWidth: { xs: '100%', sm: 'auto' }
+          }}
         >
           Add New Item
         </Button>
       </Box>
 
-      <Grid container spacing={3}>
+      {/* Menu Items Grid - Fully Responsive */}
+      <Grid container spacing={{ xs: 2, sm: 2, md: 3 }}>
         {menuItems.map((item) => (
-          <Grid item xs={12} sm={6} md={4} key={item.id}>
-            <Card elevation={2}>
+          <Grid item xs={12} sm={6} md={4} lg={3} key={item.id}>
+            <Card elevation={2} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               {item.image && (
                 <CardMedia
                   component="img"
-                  height="200"
+                  height={{ xs: '150', sm: '200' }}
                   image={item.image}
                   alt={item.name}
+                  sx={{ objectFit: 'cover' }}
                 />
               )}
-              <CardContent>
-                <Box display="flex" justifyContent="space-between" alignItems="start" mb={1}>
-                  <Typography variant="h6" component="h2">
+              <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                {/* Title and Status Row */}
+                <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1} gap={1}>
+                  <Typography 
+                    variant="h6" 
+                    component="h2"
+                    sx={{ 
+                      flex: 1,
+                      fontSize: { xs: '0.95rem', sm: '1.25rem' },
+                      wordBreak: 'break-word',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                    }}
+                  >
                     {item.name}
                   </Typography>
-                  <Box display="flex" gap={0.5}>
+                  <Box display="flex" gap={0.5} flexDirection={{ xs: 'column', sm: 'row' }} flexShrink={0}>
                     {item.isExpress && (
-                      <Chip label="EXPRESS" size="small" color="secondary" />
+                      <Chip label="EXPRESS" size="small" color="secondary" sx={{ fontSize: '0.7rem' }} />
                     )}
                     <Chip
                       label={item.isAvailable ? 'Available' : 'Unavailable'}
                       size="small"
                       color={item.isAvailable ? 'success' : 'default'}
+                      sx={{ fontSize: '0.7rem' }}
                     />
                   </Box>
                 </Box>
 
-                <Typography variant="body2" color="textSecondary" gutterBottom>
+                {/* Description */}
+                <Typography 
+                  variant="body2" 
+                  color="textSecondary" 
+                  gutterBottom
+                  sx={{
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    minHeight: '2.5rem',
+                  }}
+                >
                   {item.description}
                 </Typography>
 
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                  <Typography variant="h6" color="primary">
+                {/* Price and Prep Time */}
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                  <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                     ₹{item.price}
                   </Typography>
-                  <Typography variant="body2" color="textSecondary">
+                  <Typography variant="body2" color="textSecondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     {item.preparationTime} min
                   </Typography>
                 </Box>
 
-                <Chip label={item.category} size="small" variant="outlined" />
+                {/* Category Chip */}
+                <Chip 
+                  label={{
+                    'BREAKFAST': 'Breakfast',
+                    'SNACKS': 'Snacks',
+                    'MAIN_COURSE': 'Main Course',
+                    'DESSERTS': 'Desserts',
+                    'BEVERAGES': 'Beverages',
+                  }[item.category] || item.category}
+                  size="small" 
+                  variant="outlined"
+                  sx={{ mb: 2, alignSelf: 'flex-start' }}
+                />
 
-                <Box display="flex" justifyContent="space-between" alignItems="center" mt={2}>
+                {/* Action Buttons */}
+                <Box display="flex" justifyContent="space-between" alignItems="center" mt="auto">
                   <IconButton
                     color={item.isAvailable ? 'success' : 'default'}
                     onClick={() => toggleAvailability(item)}
+                    size="small"
                   >
-                    {item.isAvailable ? <Visibility /> : <VisibilityOff />}
+                    {item.isAvailable ? <Visibility fontSize="small" /> : <VisibilityOff fontSize="small" />}
                   </IconButton>
 
-                  <Box>
+                  <Box display="flex">
                     <IconButton
                       color="primary"
                       onClick={() => handleOpenDialog(item)}
+                      size="small"
                     >
-                      <Edit />
+                      <Edit fontSize="small" />
                     </IconButton>
                     <IconButton
                       color="error"
                       onClick={() => handleDelete(item.id)}
+                      size="small"
                     >
-                      <Delete />
+                      <Delete fontSize="small" />
                     </IconButton>
                   </Box>
                 </Box>
@@ -234,24 +316,36 @@ const MenuPage = () => {
         ))}
       </Grid>
 
-      {/* Add/Edit Dialog */}
-      <Dialog open={editDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <DialogTitle>
+      {/* Add/Edit Dialog - Responsive */}
+      <Dialog 
+        open={editDialog} 
+        onClose={handleCloseDialog} 
+        maxWidth="md" 
+        fullWidth
+        PaperProps={{
+          sx: {
+            m: { xs: 1, sm: 2 },
+            width: { xs: '100%', sm: 'auto' },
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
           {selectedItem ? 'Edit Menu Item' : 'Add New Menu Item'}
         </DialogTitle>
         <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} md={6}>
+          <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Item Name"
                 value={formData.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
                 required
+                size="small"
               />
             </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth size="small">
                 <InputLabel>Category</InputLabel>
                 <Select
                   value={formData.category}
@@ -274,9 +368,10 @@ const MenuPage = () => {
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 multiline
                 rows={3}
+                size="small"
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Price (₹)"
@@ -284,16 +379,18 @@ const MenuPage = () => {
                 value={formData.price}
                 onChange={(e) => handleInputChange('price', e.target.value)}
                 required
+                size="small"
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Preparation Time (minutes)"
+                label="Preparation Time (min)"
                 type="number"
                 value={formData.preparationTime}
                 onChange={(e) => handleInputChange('preparationTime', e.target.value)}
                 required
+                size="small"
               />
             </Grid>
             <Grid item xs={12}>
@@ -303,25 +400,28 @@ const MenuPage = () => {
                 value={formData.image}
                 onChange={(e) => handleInputChange('image', e.target.value)}
                 placeholder="https://example.com/image.jpg"
+                size="small"
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} sm={6}>
               <FormControlLabel
                 control={
                   <Switch
                     checked={formData.isAvailable}
                     onChange={(e) => handleInputChange('isAvailable', e.target.checked)}
+                    size="small"
                   />
                 }
                 label="Available"
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} sm={6}>
               <FormControlLabel
                 control={
                   <Switch
                     checked={formData.isExpress}
                     onChange={(e) => handleInputChange('isExpress', e.target.checked)}
+                    size="small"
                   />
                 }
                 label="Express Item"
@@ -329,9 +429,9 @@ const MenuPage = () => {
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button variant="contained" onClick={handleSave}>
+        <DialogActions sx={{ p: { xs: 1.5, sm: 2 } }}>
+          <Button onClick={handleCloseDialog} size="small">Cancel</Button>
+          <Button variant="contained" onClick={handleSave} size="small">
             {selectedItem ? 'Update' : 'Add'} Item
           </Button>
         </DialogActions>
