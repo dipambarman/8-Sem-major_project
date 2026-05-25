@@ -3,19 +3,29 @@ import crypto from 'crypto';
 
 let razorpay = null;
 
-// Initialize Razorpay safely — only if credentials are available
-try {
-  if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
-    razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET,
-    });
-  } else {
+// IMPORTANT: do not initialize on module load.
+// Some runtimes/entrypoints load env late; initializing here can freeze `razorpay` as null.
+const getRazorpay = () => {
+  if (razorpay) return razorpay;
+
+  try {
+    if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+      razorpay = new Razorpay({
+        key_id: process.env.RAZORPAY_KEY_ID,
+        key_secret: process.env.RAZORPAY_KEY_SECRET,
+      });
+      return razorpay;
+    }
+
     console.warn('⚠️ Razorpay credentials not found — payment features will be unavailable');
+    return null;
+  } catch (error) {
+    console.error('❌ Failed to initialize Razorpay:', (error && error.message) ? error.message : error);
+
+    return null;
   }
-} catch (error) {
-  console.error('❌ Failed to initialize Razorpay:', error.message);
-}
+};
+
 
 export const createRazorpayOrder = async (amount, currency = 'INR', receipt = null) => {
   if (!razorpay) {

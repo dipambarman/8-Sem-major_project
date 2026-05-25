@@ -1,16 +1,12 @@
 import prisma from '../utils/database.js';
 import { createRazorpayOrder, verifyPayment } from '../services/paymentService.js';
-import razorpay from '../services/paymentService.js';
-
-// Initialize Razorpay only if credentials are available
-// Moved validation to method to ensure env vars are loaded
-// let razorpay = null; 
-
+import paymentService from '../services/paymentService.js';
 
 class PaymentController {
-  // Helper to get initialized Razorpay instance
+  // Helper to get initialized Razorpay instance (dynamically imported each time)
   _getRazorpayInstance() {
-    return razorpay || null;
+    // Re-import to ensure we get current state
+    return paymentService || null;
   }
 
   // Create Razorpay order
