@@ -9,7 +9,8 @@ import { JWT_SECRET, JWT_EXPIRY } from '../config/jwt.js';
  */
 export const register = async (req, res) => {
   try {
-    const { email, password, fullName, phone } = req.body;
+    let { email, password, fullName, phone } = req.body;
+    email = email?.trim().toLowerCase();
 
     if (!email || !password || !fullName || !phone) {
       return res.status(400).json({ success: false, error: 'All fields are required' });
@@ -71,7 +72,8 @@ export const register = async (req, res) => {
  */
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
+    email = email?.trim().toLowerCase();
 
     if (!email || !password) {
       return res.status(400).json({ success: false, error: 'Email and password are required' });
@@ -135,7 +137,8 @@ export const login = async (req, res) => {
  */
 export const adminLogin = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
+    email = email?.trim().toLowerCase();
 
     if (!email || !password) {
       return res.status(400).json({ success: false, error: 'Email and password are required' });
@@ -205,7 +208,8 @@ export const getProfile = async (req, res) => {
  */
 export const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    let { email } = req.body;
+    email = email?.trim().toLowerCase();
 
     if (!email) {
       return res.status(400).json({ success: false, error: 'Email is required' });

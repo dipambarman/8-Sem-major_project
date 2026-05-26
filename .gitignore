@@ -46,3 +46,4 @@ pnpm-debug.log*
 *.sw?
 package-lock.json
 package.json
+/generated/prisma

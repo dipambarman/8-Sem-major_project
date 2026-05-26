@@ -80,8 +80,8 @@ const LoginScreen: React.FC = ({ navigation }: any) => {
     }
 
     try {
-      console.log('🔵 Attempting login for:', email);
-      const result = await dispatch(loginUser({ email, password })).unwrap();
+      console.log('🔵 Attempting login for:', email.trim());
+      const result = await dispatch(loginUser({ email: email.trim(), password })).unwrap();
       console.log('✅ Login successful:', result);
     } catch (err) {
       console.error('❌ Login error in component:', err);
