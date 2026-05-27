@@ -1,202 +1,132 @@
-# Smart Canteen Backend - Deployment Guide
+# Smart Canteen Backend — Railway Deployment Guide
 
-This guide covers deploying the Smart Canteen backend to Vercel with PostgreSQL database.
+This guide covers deploying the Smart Canteen backend to **Railway**, which fully supports WebSockets (Socket.IO), persistent processes, and PostgreSQL.
+
+## Why Railway (not Vercel)?
+
+- ✅ **WebSocket support** — Socket.IO works out of the box
+- ✅ **Persistent server** — runs as a long-lived Node.js process (not serverless)
+- ✅ **Built-in PostgreSQL** — optional, or use your existing Supabase DB
+- ✅ **Free tier available** — $5/month free credits (no credit card needed for trial)
 
 ## Prerequisites
 
-- Vercel account (https://vercel.com)
-- PostgreSQL database (we recommend Supabase or Railway for ease of setup)
-- GitHub repository (for Vercel integration)
+- [Railway account](https://railway.app) (sign up with GitHub)
+- GitHub repository with your backend code pushed
+- Node.js 18+ locally
 
-## Setup Steps
+## Step-by-Step Deployment
 
-### 1. Prepare Your Repository
-
-Ensure your backend code is pushed to GitHub:
+### 1. Push Code to GitHub
 
 ```bash
+cd backend
 git add .
-git commit -m "feat: prepare backend for Vercel deployment"
-git push origin main
+git commit -m "chore: prepare backend for Railway deployment"
+git push
 ```
 
-### 2. Set Up PostgreSQL Database
+### 2. Create a Railway Project
 
-#### Option A: Using Supabase (Recommended)
+1. Go to [railway.app/new](https://railway.app/new)
+2. Click **"Deploy from GitHub Repo"**
+3. Select your repository
+4. Railway will auto-detect it as a Node.js project
 
-1. Go to https://supabase.com and sign up
-2. Create a new project
-3. Go to Settings → Database → Connection string
-4. Copy the connection string (PostgreSQL format)
-5. Save it somewhere safe - you'll need it for Vercel
+### 3. Configure Environment Variables
 
-#### Option B: Using Railway
-
-1. Go to https://railway.app and sign up
-2. Create a new PostgreSQL database
-3. Copy the database connection string
-4. Save it somewhere safe
-
-#### Option C: Using Vercel Postgres
-
-1. Create a Vercel account
-2. Go to your dashboard and add a Postgres database
-3. Copy the connection string
-
-### 3. Deploy to Vercel
-
-#### Method 1: Using Vercel CLI
-
-```bash
-npm install -g vercel
-cd 8-Sem-major_project/backend
-vercel
-```
-
-Follow the prompts and add environment variables when asked.
-
-#### Method 2: Using Vercel Dashboard
-
-1. Go to https://vercel.com/dashboard
-2. Click "New Project"
-3. Import your GitHub repository
-4. Select the `8-Sem-major_project/backend` directory as the root
-5. Add environment variables (see below)
-6. Click Deploy
-
-### 4. Configure Environment Variables on Vercel
-
-Add the following environment variables in Vercel Dashboard:
+In your Railway project dashboard, go to **Variables** tab and add:
 
 | Variable | Value | Notes |
-|----------|-------|-------|
-| `DATABASE_PROVIDER` | `postgresql` | Database type for production |
-| `DATABASE_URL` | Your PostgreSQL connection string | From Supabase/Railway |
-| `NODE_ENV` | `production` | Production environment |
-| `JWT_SECRET` | Generate a strong random string | Use `openssl rand -base64 32` |
-| `RAZORPAY_KEY_ID` | Your Razorpay live key | Get from Razorpay dashboard |
-| `RAZORPAY_KEY_SECRET` | Your Razorpay live secret | Get from Razorpay dashboard |
-| `LOG_LEVEL` | `info` | Logging level |
-| `FRONTEND_URL` | Your frontend URL | e.g., `https://your-frontend.vercel.app` |
+|---|---|---|
+| `DATABASE_URL` | `postgresql://postgres.utrrpysg...` | Your Supabase pooler URL |
+| `DIRECT_URL` | `postgresql://postgres.utrrpysg...` | Your Supabase direct URL |
+| `JWT_SECRET` | `<strong-random-string>` | Use a long random string |
+| `RAZORPAY_KEY_ID` | `rzp_test_...` or `rzp_live_...` | Your Razorpay key |
+| `RAZORPAY_KEY_SECRET` | `<your-secret>` | Your Razorpay secret |
+| `NODE_ENV` | `production` | |
+| `PORT` | `3000` | Railway injects its own PORT, this is a fallback |
+| `FRONTEND_URL` | `*` | Or your specific frontend URL for CORS |
+| `LOG_LEVEL` | `info` | |
 
-### 5. Run Database Migrations
+### 4. Set the Start Command
 
-After deployment, run migrations:
+Railway auto-detects `npm start`, which runs `node server.js`. This is already configured in your `package.json`.
 
-```bash
-# Using Vercel CLI
-vercel exec "npm run prisma:deploy"
-```
+If needed, you can override it in Railway settings:
+- **Build Command**: `npm install`
+- **Start Command**: `npm start`
 
-Or add a custom build script:
+### 5. Deploy
 
-1. Create `migrate.sh` in the backend directory:
+Railway auto-deploys when you push to your GitHub repo. You can also trigger a manual deploy from the dashboard.
 
-```bash
-#!/bin/bash
-npm run prisma:deploy
-```
+### 6. Run Prisma Migrations
 
-2. Update `vercel.json`:
-
-```json
-{
-  "buildCommand": "npm run prisma:generate && npm run prisma:deploy"
-}
-```
-
-### 6. Update Frontend Configuration
-
-Update your frontend to use the new Vercel backend URL:
-
-In `8-Sem-major_project/mobile/src/services/api/authApi.ts`:
-
-```typescript
-const API_BASE_URL = process.env.REACT_APP_API_URL || 
-  'https://your-backend.vercel.app';
-```
-
-Update `.env` in the mobile directory:
-
-```
-REACT_APP_API_URL=https://your-backend.vercel.app
-```
-
-## Common Issues & Troubleshooting
-
-### CORS Errors
-
-If you get CORS errors:
-
-1. Ensure `FRONTEND_URL` environment variable is set correctly on Vercel
-2. Verify your frontend URL is accessible
-3. Check that your request includes proper headers
-
-### Database Connection Issues
-
-If you get database connection errors:
+After the first deploy, run migrations against your production database:
 
 ```bash
-# Check connection string format
-# Should be: postgresql://user:password@host:port/database?sslmode=require
-
-# Test connection locally first:
-DATABASE_URL="your_connection_string" npm run prisma:deploy
+# Locally, with your production DATABASE_URL
+DATABASE_URL="your_production_db_url" npx prisma migrate deploy
 ```
 
-### Prisma Generation Timeout
+Or use Railway's CLI:
+```bash
+npm install -g @railway/cli
+railway login
+railway run npx prisma migrate deploy
+```
 
-If Prisma generation times out:
+### 7. Get Your Production URL
 
-1. Increase function timeout in `vercel.json` to 60s
-2. Pre-generate Prisma client locally and commit `node_modules/.prisma`
+After deployment, Railway gives you a URL like:
+```
+https://smart-canteen-backend-production.up.railway.app
+```
 
-### Socket.io Not Working
+You can also set a custom domain in the Railway dashboard under **Settings > Networking > Public Networking**.
 
-Note: Real-time socket connections don't work well with Vercel's serverless functions. For real-time features:
+### 8. Update Mobile App
 
-- Use polling instead
-- Use a dedicated WebSocket service (e.g., Railway, Render)
-- Use Supabase Realtime
+Update your mobile app's `.env`:
+```
+EXPO_PUBLIC_API_URL=https://your-railway-url.up.railway.app
+```
 
-## Environment Variable Template
-
-Copy `.env.example` to `.env` locally and fill in values:
+## Testing the Deployment
 
 ```bash
-cp .env.example .env
+# Health check
+curl https://your-railway-url.up.railway.app/health
+
+# Should return:
+# { "success": true, "message": "Smart Canteen API is running", ... }
 ```
 
-## Monitoring & Logs
+## Alternative: Render
 
-View deployment logs on Vercel Dashboard:
+[Render](https://render.com) is another great option with similar features:
 
-1. Go to your project on Vercel
-2. Click "Deployments"
-3. Click the latest deployment
-4. View logs in real-time
+1. Go to [render.com](https://render.com) → New → Web Service
+2. Connect your GitHub repo
+3. Set:
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+4. Add environment variables (same as above)
+5. Render gives you a URL like `https://smart-canteen-backend.onrender.com`
 
-## Rollback
+> **Note**: Render's free tier spins down after 15 min of inactivity (cold starts ~30s). Railway's free tier stays running.
 
-To rollback to a previous deployment:
+## Troubleshooting
 
-1. Go to Vercel Dashboard
-2. Find the deployment you want to restore
-3. Click the three dots menu
-4. Select "Promote to Production"
+### Socket.IO not connecting
+- Ensure `FRONTEND_URL` is set correctly (or `*` for all origins)
+- Check that the mobile app points to the Railway/Render URL (not localhost)
 
-## Additional Resources
+### Database connection errors
+- Verify `DATABASE_URL` has `?pgbouncer=true&connect_timeout=30` for Supabase pooler
+- Ensure `DIRECT_URL` uses port `5432` (session mode) for migrations
 
-- [Vercel Documentation](https://vercel.com/docs)
-- [Prisma Vercel Guide](https://www.prisma.io/docs/guides/deployment/deployment-guides/deploying-to-vercel)
-- [Supabase Setup Guide](https://supabase.com/docs/guides/getting-started)
-- [Railway Deployment](https://docs.railway.app/)
-
-## Support
-
-For deployment issues:
-
-1. Check Vercel logs
-2. Test database connection locally
-3. Verify all environment variables are set
-4. Check frontend FRONTEND_URL configuration
+### Build failures
+- Check logs in Railway dashboard
+- Ensure `prisma generate` runs during `postinstall`

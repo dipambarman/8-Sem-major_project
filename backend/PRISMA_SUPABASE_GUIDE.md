@@ -56,7 +56,7 @@ npm run db:setup
 2. Click **Database** tab
 3. Scroll to "Connection pooling" or "Connection string"
 4. Click the copy icon next to PostgreSQL connection string
-5. Choose "Connection pooling" (recommended for Vercel)
+5. Choose "Connection pooling" (recommended for production)
 
 Your connection string looks like:
 ```
@@ -101,7 +101,7 @@ npm run dev
 ```
 Visit: http://localhost:3000/health
 
-### Option B: Deploy Directly to Vercel
+### Option B: Deploy to Railway
 
 1. **Push code to GitHub:**
 ```bash
@@ -110,9 +110,9 @@ git commit -m "chore: configure PostgreSQL database"
 git push origin main
 ```
 
-2. **Go to Vercel Dashboard**
-   - Select your project
-   - Go to **Settings** → **Environment Variables**
+2. **Go to Railway Dashboard**
+   - Create a new project from your GitHub repo
+   - Go to **Variables** tab
    - Add these:
 
 | Key | Value |
@@ -122,21 +122,18 @@ git push origin main
 | `JWT_SECRET` | Generate with: `openssl rand -base64 32` |
 | `RAZORPAY_KEY_ID` | Your key from Razorpay |
 | `RAZORPAY_KEY_SECRET` | Your secret from Razorpay |
-| `FRONTEND_URL` | Your frontend URL (e.g., https://your-app.vercel.app) |
+| `FRONTEND_URL` | `*` or your specific frontend URL |
 
-3. **Redeploy on Vercel:**
-   - Go to Deployments
-   - Click "Redeploy" on latest deployment
-   - Or push new commit to trigger auto-deploy
+3. **Railway auto-deploys** on every push to GitHub.
 
-4. **Run migrations on Vercel database:**
+4. **Run migrations on production database:**
 ```bash
-vercel exec "npm run prisma:deploy"
+railway run npx prisma migrate deploy
 ```
 
 5. **Seed data (optional):**
 ```bash
-vercel exec "npm run prisma:seed"
+railway run npx prisma db seed
 ```
 
 ---
@@ -150,9 +147,9 @@ npm run dev
 # Should see: {"success": true, "message": "Smart Canteen API is running"}
 ```
 
-### Check Vercel Setup
-1. Go to your Vercel deployment URL
-2. Add `/health` → `https://your-backend.vercel.app/health`
+### Check Railway Setup
+1. Go to your Railway deployment URL
+2. Add `/health` → `https://your-backend.up.railway.app/health`
 3. Should see same success message
 
 ### Verify Database
@@ -202,9 +199,9 @@ npm run prisma:deploy      # Create tables
 npm run prisma:seed        # Add test data
 npm run dev                # Start server
 
-# VERCEL DEPLOYMENT
-vercel exec "npm run prisma:deploy"   # Create tables on Vercel DB
-vercel exec "npm run prisma:seed"     # Add test data on Vercel DB
+# RAILWAY DEPLOYMENT
+railway run npx prisma migrate deploy   # Create tables on production DB
+railway run npx prisma db seed          # Add test data on production DB
 ```
 
 ---
@@ -216,6 +213,6 @@ vercel exec "npm run prisma:seed"     # Add test data on Vercel DB
 3. ✅ Update local .env with PostgreSQL
 4. ✅ Run: `npm run prisma:generate && npm run prisma:deploy`
 5. ✅ Test locally: `npm run dev`
-6. ✅ Deploy to Vercel with env variables
-7. ✅ Run: `vercel exec "npm run prisma:deploy"`
-8. ✅ Test: Visit your Vercel URL + `/health`
+6. ✅ Deploy to Railway with env variables
+7. ✅ Run: `railway run npx prisma migrate deploy`
+8. ✅ Test: Visit your Railway URL + `/health`

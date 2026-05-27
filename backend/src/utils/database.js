@@ -26,13 +26,17 @@ export const testConnection = async (retries = 3, timeout = 3000) => {
     try {
       console.log(`🔌 Testing database connection... (Attempt ${attempt}/${retries})`);
 
+      const dbCheckPromise = (async () => {
+        await prisma.$connect();
+        const [result] = await prisma.$queryRaw`SELECT 1 as connection_test`;
+        return result;
+      })();
+
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Connection attempt timed out')), timeout)
       );
 
-      await Promise.race([prisma.$connect(), timeoutPromise]);
-
-      const [result] = await prisma.$queryRaw`SELECT 1 as connection_test`;
+      const result = await Promise.race([dbCheckPromise, timeoutPromise]);
       console.log('✅ Connected to database successfully');
       console.log('📊 Connection test result:', result);
       return true;
