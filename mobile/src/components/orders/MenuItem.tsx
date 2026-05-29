@@ -72,7 +72,7 @@ const s = StyleSheet.create({
   container: { 
     backgroundColor: Colors.background.card, 
     borderRadius: Radius.lg, 
-    margin: 8, 
+    marginVertical: 8, 
     padding: Spacing.lg, 
     borderWidth: 1, 
     borderColor: Colors.border.primary 

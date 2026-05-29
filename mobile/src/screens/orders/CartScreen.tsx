@@ -9,6 +9,7 @@ import {
   Alert,
   StatusBar,
   useWindowDimensions,
+  Platform,
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,6 +41,13 @@ const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleRemoveItem = (itemId: string) => {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to remove this item from cart?')) {
+        dispatch(removeFromCart(itemId));
+      }
+      return;
+    }
+
     Alert.alert(
       'Remove Item',
       'Are you sure you want to remove this item from cart?',
@@ -63,6 +71,13 @@ const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
   };
 
   const handleClearCart = () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to remove all items?')) {
+        dispatch(clearCart());
+      }
+      return;
+    }
+
     Alert.alert(
       'Clear Cart',
       'Are you sure you want to remove all items?',
@@ -79,7 +94,11 @@ const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
 
   const handleCheckout = () => {
     if (items.length === 0) {
-      Alert.alert('Empty Cart', 'Please add items to cart before checkout');
+      if (Platform.OS === 'web') {
+        window.alert('Please add items to cart before checkout');
+      } else {
+        Alert.alert('Empty Cart', 'Please add items to cart before checkout');
+      }
       return;
     }
 
@@ -151,7 +170,7 @@ const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
       </Text>
       <TouchableOpacity
         style={styles.browseButton}
-        onPress={() => navigation.navigate('Home')}
+        onPress={() => navigation.navigate('Main', { screen: 'Home' })}
         activeOpacity={0.85}
       >
         <LinearGradient colors={Colors.gradients.goldCta} style={styles.browseGradient}>
@@ -204,40 +223,37 @@ const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
           </View>
 
           {/* Footer with Total and Checkout */}
-          <View style={[styles.footer, isTablet && { width: '100%', maxWidth: 800, alignSelf: 'center', borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, borderLeftWidth: 1, borderRightWidth: 1, borderColor: Colors.border.primary }]}>
-            <View style={styles.totalContainer}>
-              <View>
-                <Text style={styles.totalLabel}>{itemCount} items</Text>
-              </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.totalLabel}>Total</Text>
+          <View style={styles.bottomBarContainer} pointerEvents="box-none">
+            <View style={[styles.bottomBar, isTablet && styles.bottomBarTablet]}>
+              <View style={styles.totalContainer}>
+                <Text style={styles.totalLabel}>Total ({itemCount} items)</Text>
                 <Text style={styles.totalAmount}>₹{total.toFixed(0)}</Text>
               </View>
-            </View>
 
-            <TouchableOpacity
-              style={[
-                styles.checkoutButton,
-                isProcessing && styles.checkoutButtonDisabled,
-              ]}
-              onPress={handleCheckout}
-              disabled={isProcessing}
-              activeOpacity={0.85}
-            >
-              <LinearGradient
-                colors={isProcessing ? ['#374151', '#374151'] : Colors.gradients.goldCta}
-                style={styles.checkoutGradient}
+              <TouchableOpacity
+                style={[
+                  styles.checkoutButton,
+                  isProcessing && styles.checkoutButtonDisabled,
+                ]}
+                onPress={handleCheckout}
+                disabled={isProcessing}
+                activeOpacity={0.85}
               >
-                {isProcessing ? (
-                  <Text style={styles.checkoutButtonText}>Processing...</Text>
-                ) : (
-                  <>
-                    <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
-                    <Ionicons name="arrow-forward" size={18} color={Colors.background.primary} />
-                  </>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
+                <LinearGradient
+                  colors={isProcessing ? ['#374151', '#374151'] : Colors.gradients.goldCta}
+                  style={styles.checkoutGradient}
+                >
+                  {isProcessing ? (
+                    <Text style={styles.checkoutButtonText}>Processing...</Text>
+                  ) : (
+                    <>
+                      <Text style={styles.checkoutButtonText}>Checkout</Text>
+                      <Ionicons name="arrow-forward" size={18} color={Colors.background.primary} />
+                    </>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           </View>
         </>
       )}
@@ -286,16 +302,16 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     padding: Spacing.lg,
-    paddingBottom: 20,
+    paddingBottom: 100, // Make room for absolute footer
   },
   cartItem: {
     flexDirection: 'row',
-    backgroundColor: Colors.background.card,
+    backgroundColor: 'rgba(30, 38, 64, 0.4)', // subtle glassy background
     borderRadius: Radius.lg,
     padding: Spacing.lg,
     marginBottom: Spacing.md,
     borderWidth: 1,
-    borderColor: Colors.border.primary,
+    borderColor: Colors.border.secondary,
   },
   itemImage: {
     width: 72,
@@ -391,29 +407,53 @@ const styles = StyleSheet.create({
     ...Typography.button,
     color: Colors.background.primary,
   },
-  footer: {
-    backgroundColor: Colors.background.secondary,
-    paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.lg,
-    paddingBottom: 28,
+  
+  // Bottom Bar
+  bottomBarContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  bottomBar: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(17, 24, 39, 0.95)',
     borderTopWidth: 1,
     borderTopColor: Colors.border.primary,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: 16,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 20,
+  },
+  bottomBarTablet: {
+    maxWidth: 800,
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: Colors.border.primary,
   },
   totalContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.lg,
-    alignItems: 'flex-end',
+    flexDirection: 'column',
+    justifyContent: 'center',
   },
   totalLabel: {
-    ...Typography.bodySm,
+    ...Typography.caption,
     color: Colors.text.secondary,
+    marginBottom: 2,
   },
   totalAmount: {
-    ...Typography.priceLg,
+    ...Typography.h3,
     color: Colors.accent.primary,
-    fontSize: 22,
-    marginTop: 2,
   },
   checkoutButton: {
     borderRadius: Radius.button,

@@ -14,16 +14,17 @@
     },
     "preview": {
       "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api-staging.smartcanteen.com",
-        "EXPO_PUBLIC_SOCKET_URL": "wss://api-staging.smartcanteen.com"
+        "EXPO_PUBLIC_API_URL": "https://smart-canteen-backend-qwf5.onrender.com"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.smartcanteen.com",
-        "EXPO_PUBLIC_SOCKET_URL": "wss://api.smartcanteen.com"
+        "EXPO_PUBLIC_API_URL": "https://smart-canteen-backend-qwf5.onrender.com"
       }
     }
   },

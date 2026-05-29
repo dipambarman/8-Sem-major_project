@@ -3,9 +3,10 @@ import { ApiResponse, Order } from '../../types/api';
 
 const orderApi = {
   createOrder: async (orderData: {
-    items: { menuItemId: string; quantity: number }[];
+    items: { menuItemId: string | number; quantity: number }[];
     orderType: 'delivery' | 'pickup' | 'dine_in';
     paymentMethod: 'wallet' | 'razorpay';
+    paymentDetails?: any;
     slotTime?: string;
   }): Promise<ApiResponse<Order>> => {
     const response = await apiClient.post('/api/orders', orderData);

@@ -8,6 +8,7 @@ import {
   Alert,
   StatusBar,
   useWindowDimensions,
+  Platform,
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
@@ -16,7 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { RootState, AppDispatch } from '../../store/store';
 import { createOrder } from '../../store/slices/orderSlice';
 import { fetchWallet } from '../../store/slices/walletSlice';
-import { clearCart } from '../../store/slices/cartSlice';
+import { clearCart, incrementQuantity, decrementQuantity } from '../../store/slices/cartSlice';
 import { initiatePayment } from '../../services/payment/razorpay';
 import { paymentApi } from '../../services/api/paymentApi';
 import Button from '../../components/common/Button';
@@ -45,6 +46,17 @@ const CheckoutScreen: React.FC = () => {
     dispatch(fetchWallet());
   }, [dispatch]);
 
+  // Navigate back if cart becomes empty from decrementing
+  React.useEffect(() => {
+    if (cartItems.length === 0) {
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      } else {
+        (navigation as any).navigate('Main', { screen: 'Home' });
+      }
+    }
+  }, [cartItems.length, navigation]);
+
   const [orderType, setOrderType] = useState<'delivery' | 'pickup' | 'dine_in'>('pickup');
   const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'razorpay'>('wallet');
   const [loading, setLoading] = useState(false);
@@ -55,19 +67,22 @@ const CheckoutScreen: React.FC = () => {
 
   const handlePlaceOrder = async () => {
     if (cartItems.length === 0) {
-      Alert.alert('Error', 'Your cart is empty');
+      if (Platform.OS === 'web') window.alert('Your cart is empty');
+      else Alert.alert('Error', 'Your cart is empty');
       return;
     }
 
     // Check if wallet is loaded and has sufficient balance
     if (paymentMethod === 'wallet') {
       if (!wallet) {
-        Alert.alert('Error', 'Wallet information not available. Please try again.');
+        if (Platform.OS === 'web') window.alert('Wallet information not available. Please try again.');
+        else Alert.alert('Error', 'Wallet information not available. Please try again.');
         dispatch(fetchWallet()); // execution might recover next time
         return;
       }
       if (wallet.balance < total) {
-        Alert.alert('Insufficient Balance', 'Please top up your wallet or choose another payment method');
+        if (Platform.OS === 'web') window.alert('Please top up your wallet or choose another payment method');
+        else Alert.alert('Insufficient Balance', 'Please top up your wallet or choose another payment method');
         return;
       }
     }
@@ -101,7 +116,8 @@ const CheckoutScreen: React.FC = () => {
 
         if (!paymentData.success) {
           setLoading(false);
-          Alert.alert('Payment Failed', paymentData.error);
+          if (Platform.OS === 'web') window.alert(paymentData.error);
+          else Alert.alert('Payment Failed', paymentData.error);
           return;
         }
 
@@ -130,7 +146,7 @@ const CheckoutScreen: React.FC = () => {
 
       const orderData = {
         items: cartItems.map(item => ({
-          menuItemId: item.id,
+          menuItemId: Number(item.id),
           quantity: item.quantity,
         })),
         orderType,
@@ -142,18 +158,24 @@ const CheckoutScreen: React.FC = () => {
 
       dispatch(clearCart());
 
-      Alert.alert(
-        '🎉 Order Placed!',
-        `Your order #${result.id} has been placed successfully`,
-        [
-          {
-            text: 'Track Order',
-            onPress: () => (navigation as any).navigate('Tracking', { orderId: result.id }),
-          },
-        ]
-      );
+      if (Platform.OS === 'web') {
+        window.alert(`🎉 Order Placed!\nYour order #${result.id} has been placed successfully`);
+        (navigation as any).navigate('OrderTracking', { orderId: result.id });
+      } else {
+        Alert.alert(
+          '🎉 Order Placed!',
+          `Your order #${result.id} has been placed successfully`,
+          [
+            {
+              text: 'Track Order',
+              onPress: () => (navigation as any).navigate('OrderTracking', { orderId: result.id }),
+            },
+          ]
+        );
+      }
     } catch (error) {
-      Alert.alert('Error', 'Failed to place order. Please try again.');
+      if (Platform.OS === 'web') window.alert('Failed to place order. Please try again.');
+      else Alert.alert('Error', 'Failed to place order. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -192,8 +214,24 @@ const CheckoutScreen: React.FC = () => {
           {cartItems.map((item) => (
             <View key={item.id} style={styles.orderItem}>
               <View style={styles.itemLeft}>
-                <View style={styles.qtyBadge}>
-                  <Text style={styles.qtyText}>{item.quantity}x</Text>
+                <View style={styles.quantityContainer}>
+                  <TouchableOpacity
+                    style={styles.quantityButton}
+                    onPress={() => dispatch(decrementQuantity(item.id))}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="remove" size={14} color={Colors.accent.primary} />
+                  </TouchableOpacity>
+
+                  <Text style={styles.quantityText}>{item.quantity}</Text>
+
+                  <TouchableOpacity
+                    style={styles.quantityButton}
+                    onPress={() => dispatch(incrementQuantity(item.id))}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="add" size={14} color={Colors.accent.primary} />
+                  </TouchableOpacity>
                 </View>
                 <Text style={styles.itemName}>{item.name}</Text>
               </View>
@@ -288,17 +326,19 @@ const CheckoutScreen: React.FC = () => {
       </ScrollView>
 
       {/* Fixed Bottom CTA */}
-      <View style={[styles.bottomBar, isTablet && { width: '100%', maxWidth: 800, alignSelf: 'center', borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, borderLeftWidth: 1, borderRightWidth: 1, borderColor: Colors.border.primary }]}>
-        <View style={styles.bottomInfo}>
-          <Text style={styles.bottomLabel}>Total</Text>
-          <Text style={styles.bottomPrice}>₹{total.toFixed(0)}</Text>
+      <View style={styles.bottomBarContainer} pointerEvents="box-none">
+        <View style={[styles.bottomBar, isTablet && styles.bottomBarTablet]}>
+          <View style={styles.bottomInfo}>
+            <Text style={styles.bottomLabel}>Total</Text>
+            <Text style={styles.bottomPrice}>₹{total.toFixed(0)}</Text>
+          </View>
+          <TouchableOpacity style={styles.placeOrderBtn} onPress={handlePlaceOrder} activeOpacity={0.85}>
+            <LinearGradient colors={Colors.gradients.goldCta} style={styles.placeOrderGradient}>
+              <Text style={styles.placeOrderText}>Place Order</Text>
+              <Ionicons name="arrow-forward" size={18} color={Colors.background.primary} />
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.placeOrderBtn} onPress={handlePlaceOrder} activeOpacity={0.85}>
-          <LinearGradient colors={Colors.gradients.goldCta} style={styles.placeOrderGradient}>
-            <Text style={styles.placeOrderText}>Place Order</Text>
-            <Ionicons name="arrow-forward" size={18} color={Colors.background.primary} />
-          </LinearGradient>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -346,19 +386,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    gap: 10,
+    gap: 12,
   },
-  qtyBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: Colors.accent.muted,
+  quantityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background.tertiary,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border.primary,
+  },
+  quantityButton: {
+    width: 24,
+    height: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  qtyText: {
+  quantityText: {
     ...Typography.captionBold,
-    color: Colors.accent.primary,
+    color: Colors.text.primary,
+    minWidth: 16,
+    textAlign: 'center',
   },
   itemName: {
     ...Typography.body,
@@ -470,19 +518,36 @@ const styles = StyleSheet.create({
   },
 
   // Bottom Bar
-  bottomBar: {
+  bottomBarContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
+    alignItems: 'center',
+  },
+  bottomBar: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.background.secondary,
     borderTopWidth: 1,
     borderTopColor: Colors.border.primary,
     paddingHorizontal: Spacing.xl,
-    paddingVertical: 14,
-    paddingBottom: 28,
+    paddingVertical: 16,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  bottomBarTablet: {
+    maxWidth: 800,
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: 0,
   },
   bottomInfo: {
     marginRight: Spacing.xl,

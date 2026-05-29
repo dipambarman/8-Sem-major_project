@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,11 @@ import {
   TouchableOpacity,
   RefreshControl,
   StatusBar,
-  useWindowDimensions,
+  Animated,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
-import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
+import { RouteProp, useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -22,66 +24,88 @@ import { menuApi } from '../../services/api/menuApi';
 import { Colors, Radius, Spacing } from '../../theme/colors';
 import { Typography } from '../../theme/typography';
 
+// ─── Database category → Display label mapping ────────────────────
+const CATEGORY_LABELS: Record<string, string> = {
+  ALL: 'All',
+  BREAKFAST: 'Breakfast',
+  SNACKS: 'Snacks',
+  MAIN_COURSE: 'Main Course',
+  DESSERTS: 'Desserts',
+  BEVERAGES: 'Beverages',
+};
+
+const CATEGORY_ICONS: Record<string, { icon: string; color: string }> = {
+  ALL: { icon: 'grid', color: Colors.accent.primary },
+  BREAKFAST: { icon: 'sunny', color: '#F97316' },
+  SNACKS: { icon: 'fast-food', color: '#10B981' },
+  MAIN_COURSE: { icon: 'restaurant', color: '#8B5CF6' },
+  DESSERTS: { icon: 'ice-cream', color: '#EC4899' },
+  BEVERAGES: { icon: 'cafe', color: '#F59E0B' },
+};
+
 const MenuScreen: React.FC = () => {
-  const route = useRoute<RouteProp<{ params: { vendorId?: string } }, 'params'>>();
+  const route = useRoute<RouteProp<{ params: { vendorId?: string; category?: string } }, 'params'>>();
   const navigation = useNavigation();
   const dispatch = useDispatch();
 
-  const { vendorId } = route.params || {};
   const cartItems = useSelector((state: RootState) => state.cart.items);
 
   const [menuItems, setMenuItems] = useState<MenuItemType[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<string[]>(['ALL']);
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  const { width } = useWindowDimensions();
-  // Responsive columns: < 768px -> 1 col, 768px-1024px -> 2 cols, > 1024px -> 3 cols
-  const numColumns = width >= 1024 ? 3 : width >= 768 ? 2 : 1;
+  // ─── Receive category param every time screen focuses ──────────
+  useFocusEffect(
+    useCallback(() => {
+      const catParam = route.params?.category;
+      if (catParam && catParam !== selectedCategory) {
+        const normalised = catParam.toUpperCase();
+        if (categories.includes(normalised) || normalised === 'ALL') {
+          setSelectedCategory(normalised);
+        }
+      }
+    }, [route.params?.category, categories])
+  );
 
-  // Category display mapping from database format (UPPERCASE) to UI format (Title Case)
-  const categoryDisplayMap: Record<string, string> = {
-    'BREAKFAST': 'Breakfast',
-    'SNACKS': 'Snacks',
-    'MAIN_COURSE': 'Main Course',
-    'DESSERTS': 'Desserts',
-    'BEVERAGES': 'Beverages',
-  };
-
-  // Reverse mapping for filtering
-  const displayToDatabaseMap: Record<string, string> = {
-    'All': 'All',
-    'Breakfast': 'BREAKFAST',
-    'Snacks': 'SNACKS',
-    'Main Course': 'MAIN_COURSE',
-    'Desserts': 'DESSERTS',
-    'Beverages': 'BEVERAGES',
-  };
-
+  // ─── Initial data load ─────────────────────────────────────────
   useEffect(() => {
     fetchMenu();
-  }, [vendorId]);
+  }, []);
 
   const fetchMenu = async () => {
-    setLoading(true);
     try {
-      const response = await menuApi.getMenu(vendorId);
+      const response = await menuApi.getMenu(route.params?.vendorId);
       if (response.success) {
-        const items = response.data;
+        const items: MenuItemType[] = response.data;
         setMenuItems(items);
-        // Extract unique categories from items and convert to display names
-        const uniqueDatabaseCategories = new Set(items.map((item: MenuItemType) => item.category));
-        const displayCategories = Array.from(uniqueDatabaseCategories).map(
-          (cat: string) => categoryDisplayMap[cat] || cat
-        );
-        const sortedCategories = ['All', ...displayCategories.sort()];
-        setCategories(sortedCategories as string[]);
-        setSelectedCategory('All');
+
+        // Build category list from actual data
+        const uniqueDbCats = [...new Set(items.map((i) => i.category))];
+        const sorted = uniqueDbCats.sort();
+        setCategories(['ALL', ...sorted]);
+
+        // Apply initial category from nav param (first load only)
+        const catParam = route.params?.category;
+        if (catParam) {
+          const normalised = catParam.toUpperCase();
+          if (normalised === 'ALL' || sorted.includes(normalised)) {
+            setSelectedCategory(normalised);
+          }
+        }
+
+        // Fade in content
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 350,
+          useNativeDriver: true,
+        }).start();
       }
     } catch (error) {
       console.error('Fetch menu error:', error);
-      Alert.alert('Error', 'Failed to fetch menu');
+      Alert.alert('Error', 'Failed to fetch menu. Pull down to retry.');
     } finally {
       setLoading(false);
     }
@@ -93,160 +117,241 @@ const MenuScreen: React.FC = () => {
     setRefreshing(false);
   };
 
-  // Filter items based on selected category (convert display name to database format for filtering)
-  const filteredItems = selectedCategory === 'All'
-    ? menuItems
-    : menuItems.filter(item => item.category === displayToDatabaseMap[selectedCategory]);
+  // ─── Filtering ─────────────────────────────────────────────────
+  const filteredItems =
+    selectedCategory === 'ALL'
+      ? menuItems
+      : menuItems.filter((item) => item.category === selectedCategory);
 
+  // ─── Cart helpers ──────────────────────────────────────────────
   const handleAddToCart = (item: MenuItemType, quantity: number) => {
     if (quantity <= 0) {
+      dispatch({ type: 'cart/removeFromCart', payload: item.id });
       return;
     }
-    // Fix: Spread item properties to ensure flat structure (id, name, price, etc.)
-    // instead of nested { item: {...}, quantity }
     dispatch(addToCart({ ...item, quantity }));
   };
 
   const getCartQuantity = (itemId: string) => {
-    // Fix: access item.id directly as state is now flat
-    const cartItem = cartItems.find(item => item.id === itemId);
+    const cartItem = cartItems.find((item) => item.id === itemId);
     return cartItem?.quantity || 0;
   };
 
   const totalCartItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const totalCartValue = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  const renderCategoryFilter = ({ item }: { item: string }) => (
-    <TouchableOpacity
-      style={[
-        styles.categoryButton,
-        selectedCategory === item && styles.selectedCategoryButton
-      ]}
-      onPress={() => setSelectedCategory(item)}
-    >
-      <Text
-        style={[
-          styles.categoryButtonText,
-          selectedCategory === item && styles.selectedCategoryButtonText
-        ]}
+  // ─── Category chip renderer ────────────────────────────────────
+  const renderCategoryChip = (cat: string) => {
+    const isActive = selectedCategory === cat;
+    const meta = CATEGORY_ICONS[cat] || { icon: 'ellipse', color: Colors.text.secondary };
+    const label = CATEGORY_LABELS[cat] || cat;
+
+    return (
+      <TouchableOpacity
+        key={cat}
+        activeOpacity={0.7}
+        style={[styles.categoryChip, isActive && styles.categoryChipActive]}
+        onPress={() => setSelectedCategory(cat)}
       >
-        {item}
-      </Text>
-    </TouchableOpacity>
+        <View
+          style={[
+            styles.categoryIconCircle,
+            { backgroundColor: isActive ? meta.color : `${meta.color}20` },
+          ]}
+        >
+          <Ionicons
+            name={meta.icon as any}
+            size={16}
+            color={isActive ? '#fff' : meta.color}
+          />
+        </View>
+        <Text
+          style={[
+            styles.categoryChipText,
+            isActive && { color: Colors.text.primary, fontWeight: '700' },
+          ]}
+        >
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  // ─── Menu item renderer ────────────────────────────────────────
+  const renderMenuItem = ({ item }: { item: MenuItemType }) => (
+    <MenuItem
+      item={item}
+      onAddToCart={handleAddToCart}
+      cartQuantity={getCartQuantity(item.id)}
+    />
   );
 
+  // ─── Loading state ─────────────────────────────────────────────
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <StatusBar barStyle="light-content" backgroundColor={Colors.background.primary} />
+        <ActivityIndicator size="large" color={Colors.accent.primary} />
+        <Text style={styles.loadingText}>Loading menu...</Text>
+      </View>
+    );
+  }
+
+  // ─── Main render ───────────────────────────────────────────────
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.background.primary} />
 
-      <View style={styles.header}>
-        <Text style={styles.title}>Our Menu</Text>
-        <Text style={styles.subtitle}>Curated dishes for you</Text>
-        {totalCartItems > 0 && (
-          <TouchableOpacity
-            style={styles.cartButton}
-            onPress={() => navigation.navigate('Cart' as never)}
-          >
-            <LinearGradient colors={Colors.gradients.goldCta} style={styles.cartButtonGradient}>
-              <Ionicons name="basket" size={20} color={Colors.background.primary} />
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <LinearGradient
+        colors={[Colors.background.primary, Colors.background.secondary]}
+        style={styles.header}
+      >
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.title}>Our Menu</Text>
+            <Text style={styles.subtitle}>
+              {filteredItems.length} {filteredItems.length === 1 ? 'dish' : 'dishes'} available
+            </Text>
+          </View>
+          {totalCartItems > 0 && (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.cartButton}
+              onPress={() => navigation.navigate('Cart' as never)}
+            >
+              <LinearGradient colors={Colors.gradients.goldCta} style={styles.cartButtonGradient}>
+                <Ionicons name="basket" size={20} color={Colors.background.primary} />
+              </LinearGradient>
               <View style={styles.cartBadge}>
                 <Text style={styles.cartBadgeText}>{totalCartItems}</Text>
               </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        )}
-      </View>
+            </TouchableOpacity>
+          )}
+        </View>
 
-      <FlatList
-        data={categories}
-        renderItem={renderCategoryFilter}
-        keyExtractor={(item) => item}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.categoryFilters}
-        style={styles.categoryContainer}
-      />
+        {/* ── Category chips (scrollable row) ──────────────────── */}
+        <FlatList
+          data={categories}
+          renderItem={({ item }) => renderCategoryChip(item)}
+          keyExtractor={(item) => item}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryRow}
+          style={styles.categoryList}
+        />
+      </LinearGradient>
 
-      <FlatList
-        key={numColumns} // Force re-render when numColumns changes
-        data={filteredItems}
-        keyExtractor={(item) => item.id}
-        numColumns={numColumns}
-        renderItem={({ item }) => (
-          <View style={{ flex: 1, maxWidth: numColumns > 1 ? `${100 / numColumns}%` : '100%' }}>
-            <MenuItem
-              item={item}
-              onAddToCart={handleAddToCart}
-              cartQuantity={getCartQuantity(item.id)}
+      {/* ── Menu list ──────────────────────────────────────────── */}
+      <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+        <FlatList
+          data={filteredItems}
+          keyExtractor={(item) => item.id}
+          renderItem={renderMenuItem}
+          contentContainerStyle={styles.menuListContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Colors.accent.primary}
+              colors={[Colors.accent.primary]}
             />
-          </View>
-        )}
-        contentContainerStyle={[
-          { paddingBottom: 100 },
-          numColumns > 1 && { paddingHorizontal: Spacing.md }
-        ]}
-        columnWrapperStyle={numColumns > 1 ? { justifyContent: 'flex-start' } : undefined}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Colors.accent.primary}
-            colors={[Colors.accent.primary]}
-          />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="restaurant-outline" size={64} color={Colors.text.tertiary} />
-            <Text style={styles.emptyText}>
-              {loading ? 'Loading menu...' : 'No items available'}
-            </Text>
-          </View>
-        }
-      />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconCircle}>
+                <Ionicons name="restaurant-outline" size={48} color={Colors.text.tertiary} />
+              </View>
+              <Text style={styles.emptyTitle}>No dishes found</Text>
+              <Text style={styles.emptyText}>
+                Try selecting a different category or pull down to refresh.
+              </Text>
+            </View>
+          }
+        />
+      </Animated.View>
+
+      {/* ── Floating cart bar ───────────────────────────────────── */}
+      {totalCartItems > 0 && (
+        <TouchableOpacity
+          activeOpacity={0.9}
+          style={styles.floatingCart}
+          onPress={() => navigation.navigate('Cart' as never)}
+        >
+          <LinearGradient
+            colors={Colors.gradients.goldCta}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.floatingCartGradient}
+          >
+            <View style={styles.floatingCartLeft}>
+              <View style={styles.floatingCartCount}>
+                <Text style={styles.floatingCartCountText}>{totalCartItems}</Text>
+              </View>
+              <Text style={styles.floatingCartLabel}>View Cart</Text>
+            </View>
+            <Text style={styles.floatingCartPrice}>₹{totalCartValue}</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
 
+// ─── STYLES ─────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background.primary,
   },
-  header: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: 48,
-    paddingBottom: Spacing.md,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: Colors.background.primary,
+  },
+  loadingText: {
+    ...Typography.body,
+    color: Colors.text.secondary,
+    marginTop: 14,
+  },
+
+  // ── Header ───────────────────────────────────────────────────────
+  header: {
+    paddingTop: Platform.OS === 'ios' ? 56 : 48,
+    paddingBottom: 6,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: Spacing.xl,
+    marginBottom: 14,
   },
   title: {
     ...Typography.h2,
     color: Colors.text.primary,
-    fontSize: 24,
-    marginBottom: 4,
+    fontSize: 26,
   },
   subtitle: {
     ...Typography.bodySm,
     color: Colors.text.secondary,
     marginTop: 4,
-    fontSize: 12,
   },
   cartButton: {
-    position: 'absolute',
-    top: 48,
-    right: Spacing.md,
-    borderRadius: 24,
-    overflow: 'hidden',
+    position: 'relative',
   },
   cartButtonGradient: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cartBadge: {
     position: 'absolute',
-    top: -6,
-    right: -6,
+    top: -4,
+    right: -4,
     backgroundColor: Colors.status.error,
     borderRadius: 10,
     minWidth: 20,
@@ -261,47 +366,128 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
   },
-  categoryContainer: {
-    maxHeight: 52,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.primary,
+
+  // ── Category chips ───────────────────────────────────────────────
+  categoryList: {
+    maxHeight: 56,
   },
-  categoryFilters: {
-    paddingHorizontal: Spacing.md,
+  categoryRow: {
+    paddingHorizontal: Spacing.xl,
     paddingVertical: 8,
-    gap: 6,
+    gap: 10,
   },
-  categoryButton: {
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingVertical: 8,
     borderRadius: Radius.pill,
     backgroundColor: Colors.background.tertiary,
     borderWidth: 1,
     borderColor: Colors.border.primary,
+    gap: 8,
   },
-  selectedCategoryButton: {
-    backgroundColor: Colors.accent.primary,
+  categoryChipActive: {
+    backgroundColor: Colors.accent.muted,
     borderColor: Colors.accent.primary,
   },
-  categoryButtonText: {
-    ...Typography.label,
-    color: Colors.text.secondary,
-    fontSize: 12,
-  },
-  selectedCategoryButtonText: {
-    color: Colors.background.primary,
-  },
-  emptyState: {
-    flex: 1,
+  categoryIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  categoryChipText: {
+    ...Typography.label,
+    color: Colors.text.secondary,
+    fontSize: 13,
+  },
+
+  // ── Menu list ────────────────────────────────────────────────────
+  menuListContent: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: 4,
+    paddingBottom: 100,
+  },
+
+  // ── Empty state ──────────────────────────────────────────────────
+  emptyState: {
+    alignItems: 'center',
     paddingTop: 80,
+    paddingHorizontal: Spacing.xxl,
+  },
+  emptyIconCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: Colors.background.tertiary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: Colors.border.primary,
+  },
+  emptyTitle: {
+    ...Typography.h4,
+    color: Colors.text.primary,
+    marginBottom: 8,
   },
   emptyText: {
     ...Typography.body,
     color: Colors.text.secondary,
-    marginTop: 12,
-    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+
+  // ── Floating cart bar ────────────────────────────────────────────
+  floatingCart: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 28 : 16,
+    left: Spacing.xl,
+    right: Spacing.xl,
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+    shadowColor: Colors.accent.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  floatingCartGradient: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  floatingCartLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  floatingCartCount: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  floatingCartCountText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  floatingCartLabel: {
+    ...Typography.button,
+    color: Colors.background.primary,
+    fontSize: 15,
+  },
+  floatingCartPrice: {
+    ...Typography.price,
+    color: Colors.background.primary,
+    fontSize: 18,
   },
 });
 

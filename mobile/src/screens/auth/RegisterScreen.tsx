@@ -25,7 +25,7 @@ const RegisterScreen: React.FC = ({ navigation }: any) => {
     }
     try {
       await dispatch(registerUser({ email, password, fullName, phone })).unwrap();
-      Alert.alert('Welcome!', 'Your account has been created successfully!', [{ text: 'OK', onPress: () => navigation.navigate('Home') }]);
+      Alert.alert('Welcome!', 'Your account has been created successfully!');
     } catch (err) {
       Alert.alert('Registration Failed', error || 'An error occurred');
     }

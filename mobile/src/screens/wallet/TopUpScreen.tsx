@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   Alert,
+  Platform,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
@@ -41,17 +42,24 @@ const TopUpScreen: React.FC = () => {
         // Payment successful, update wallet
         await dispatch(topUpWallet(amount)).unwrap();
 
-        Alert.alert(
-          'Success!',
-          `₹${amount} has been added to your wallet`,
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
-        );
+        if (Platform.OS === 'web') {
+          window.alert(`Success!\n₹${amount} has been added to your wallet`);
+          navigation.goBack();
+        } else {
+          Alert.alert(
+            'Success!',
+            `₹${amount} has been added to your wallet`,
+            [{ text: 'OK', onPress: () => navigation.goBack() }]
+          );
+        }
       } else {
-        Alert.alert('Payment Failed', paymentResult.error || 'Please try again');
+        if (Platform.OS === 'web') window.alert(paymentResult.error || 'Please try again');
+        else Alert.alert('Payment Failed', paymentResult.error || 'Please try again');
       }
     } catch (error: any) {
       console.error('Payment failed:', error);
-      Alert.alert('Payment Failed', 'Please try again');
+      if (Platform.OS === 'web') window.alert('Please try again');
+      else Alert.alert('Payment Failed', 'Please try again');
     }
   };
 

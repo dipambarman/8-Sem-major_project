@@ -11,7 +11,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { LinearGradient } from 'expo-linear-gradient';
 import { RootState } from '../../store/store';
@@ -43,9 +43,11 @@ const ReservationScreen: React.FC = () => {
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
 
-  useEffect(() => {
-    fetchReservations();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchReservations();
+    }, [])
+  );
 
   const fetchReservations = async () => {
     try {
@@ -58,8 +60,8 @@ const ReservationScreen: React.FC = () => {
           time: res.reservationTime ? new Date(res.reservationTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
           partySize: res.partySize,
           tableNumber: res.tableNumber,
-          status: res.status === 'active' ? 'confirmed' : res.status,
-          venueArea: res.venueArea || 'Main Dining',
+          status: res.status ? res.status.toLowerCase() : 'pending',
+          venueArea: res.diningArea || res.venueArea || 'Main Dining',
           specialRequests: res.specialRequests,
         }));
         setReservations(mapped);
@@ -115,15 +117,13 @@ const ReservationScreen: React.FC = () => {
   };
 
   const getAreaIcon = (area: string) => {
-    const icons: Record<string, string> = {
-      'Main Dining': 'restaurant',
-      'Outdoor Seating': 'leaf',
-      'Private Room': 'lock-closed',
-      'Counter Seating': 'cafe',
-      'Rooftop Lounge': 'moon',
-      'Garden Terrace': 'flower',
-    };
-    return icons[area] || 'location';
+    const areaLower = area.toLowerCase();
+    if (areaLower.includes('main')) return 'restaurant';
+    if (areaLower.includes('outdoor')) return 'leaf';
+    if (areaLower.includes('private')) return 'lock-closed';
+    if (areaLower.includes('counter')) return 'cafe';
+    if (areaLower.includes('rooftop')) return 'moon';
+    return 'location';
   };
 
   const renderReservation = ({ item }: { item: Reservation }) => {

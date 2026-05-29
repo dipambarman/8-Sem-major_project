@@ -20,7 +20,14 @@ const SearchScreen: React.FC = () => {
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
 
-  const FILTER_OPTIONS = ['all', 'Beverages', 'Snacks', 'Main Course', 'Desserts', 'Breakfast'];
+  const FILTER_OPTIONS = [
+    { id: 'all', label: 'All' },
+    { id: 'BEVERAGES', label: 'Drinks' },
+    { id: 'SNACKS', label: 'Snacks' },
+    { id: 'MAIN_COURSE', label: 'Meals' },
+    { id: 'DESSERTS', label: 'Desserts' },
+    { id: 'BREAKFAST', label: 'Breakfast' },
+  ];
 
   useEffect(() => {
     // Load all menu items once
@@ -64,7 +71,10 @@ const SearchScreen: React.FC = () => {
   };
 
   const handleAddToCart = (item: MenuItemType, qty: number) => {
-    if (qty <= 0) return;
+    if (qty <= 0) {
+      dispatch({ type: 'cart/removeFromCart', payload: item.id });
+      return;
+    }
     dispatch(addToCart({ ...item, quantity: qty }));
   };
 
@@ -106,14 +116,14 @@ const SearchScreen: React.FC = () => {
             horizontal
             showsHorizontalScrollIndicator={false}
             data={FILTER_OPTIONS}
-            keyExtractor={item => item}
+            keyExtractor={item => item.id}
             renderItem={({ item }) => (
               <TouchableOpacity
-                style={[s.filterChip, selectedFilter === item && s.filterChipActive]}
-                onPress={() => setSelectedFilter(item)}
+                style={[s.filterChip, selectedFilter === item.id && s.filterChipActive]}
+                onPress={() => setSelectedFilter(item.id)}
               >
-                <Text style={[s.filterText, selectedFilter === item && s.filterTextActive]}>
-                  {item}
+                <Text style={[s.filterText, selectedFilter === item.id && s.filterTextActive]}>
+                  {item.label}
                 </Text>
               </TouchableOpacity>
             )}

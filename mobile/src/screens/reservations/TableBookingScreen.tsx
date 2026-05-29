@@ -10,6 +10,7 @@ import {
   StatusBar,
   Dimensions,
   useWindowDimensions,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -18,6 +19,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import Button from '../../components/common/Button';
 import { Colors, Radius, Spacing } from '../../theme/colors';
 import { Typography } from '../../theme/typography';
+import { reservationApi } from '../../services/api/reservationApi';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
@@ -29,10 +32,14 @@ const DINING_AREAS = [
   { id: 'counter', name: 'Chef\'s Counter', description: 'Watch the chef in action', icon: 'flame', capacity: '1-4', color: '#EF4444' },
 ];
 
-const TableBookingScreen: React.FC = () => {
+const TableBookingScreen: React.FC = ({ route }: any) => {
   const navigation = useNavigation();
   const { width: screenWidth } = useWindowDimensions();
   const isTablet = screenWidth >= 768;
+  const insets = useSafeAreaInsets();
+  
+  // Get vendorId from params, fallback to 1 for development/testing
+  const vendorId = route?.params?.vendorId || 1;
   
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState<string>('');
@@ -48,27 +55,59 @@ const TableBookingScreen: React.FC = () => {
 
   const handleBooking = async () => {
     if (!selectedTime || !selectedArea) {
-      Alert.alert('Incomplete Details', 'Please select time and dining area');
+      if (Platform.OS === 'web') window.alert('Please select time and dining area');
+      else Alert.alert('Incomplete Details', 'Please select time and dining area');
       return;
     }
 
     setLoading(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Combine date and time into an ISO string
+      const [time, modifier] = selectedTime.split(' ');
+      let [hours, minutes] = time.split(':');
+      if (hours === '12') {
+        hours = '00';
+      }
+      if (modifier === 'PM') {
+        hours = (parseInt(hours, 10) + 12).toString();
+      }
       
-      Alert.alert(
-        '🎉 Reservation Confirmed!',
-        `Your table has been reserved for ${partySize} guests on ${selectedDate.toLocaleDateString()} at ${selectedTime} in ${DINING_AREAS.find(a => a.id === selectedArea)?.name}`,
-        [
-          {
-            text: 'View Reservations',
-            onPress: () => navigation.goBack(),
-          },
-        ]
-      );
-    } catch (error) {
-      Alert.alert('Booking Failed', 'Please try again later');
+      const resDate = new Date(selectedDate);
+      resDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+
+      const response = await reservationApi.create({
+        vendorId: Number(vendorId),
+        reservationTime: resDate.toISOString(),
+        partySize,
+        diningArea: selectedArea,
+        specialRequests
+      });
+
+      if (response.success) {
+        const message = `Your table has been reserved for ${partySize} guests on ${selectedDate.toLocaleDateString()} at ${selectedTime} in ${DINING_AREAS.find(a => a.id === selectedArea)?.name}`;
+        
+        if (Platform.OS === 'web') {
+          window.alert('🎉 Reservation Confirmed!\n' + message);
+          navigation.goBack();
+        } else {
+          Alert.alert(
+            '🎉 Reservation Confirmed!',
+            message,
+            [
+              {
+                text: 'View Reservations',
+                onPress: () => navigation.goBack(),
+              },
+            ]
+          );
+        }
+      }
+    } catch (error: any) {
+      console.error('Booking error:', error);
+      const errorMsg = error.response?.data?.error || 'Please try again later';
+      if (Platform.OS === 'web') window.alert(`Booking Failed: ${errorMsg}`);
+      else Alert.alert('Booking Failed', errorMsg);
     } finally {
       setLoading(false);
     }
@@ -252,26 +291,52 @@ const TableBookingScreen: React.FC = () => {
         {/* Date Selection */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Select Date</Text>
-          <TouchableOpacity
-            style={styles.dateSelector}
-            onPress={() => { setShowDatePicker(true); setStep(Math.max(step, 1)); }}
-          >
-            <View style={styles.dateIconBox}>
-              <Ionicons name="calendar" size={20} color={Colors.accent.primary} />
-            </View>
-            <Text style={styles.dateText}>
-              {selectedDate.toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </Text>
-            <Ionicons name="chevron-forward" size={18} color={Colors.text.tertiary} />
-          </TouchableOpacity>
+          {Platform.OS === 'web' ? (
+            React.createElement('input', {
+              type: 'date',
+              value: selectedDate.toISOString().split('T')[0],
+              min: new Date().toISOString().split('T')[0],
+              onChange: (e: any) => {
+                const newDate = new Date(e.target.value);
+                if (!isNaN(newDate.getTime())) {
+                  setSelectedDate(newDate);
+                  setStep(Math.max(step, 1));
+                }
+              },
+              style: {
+                width: '100%',
+                padding: '14px',
+                borderRadius: 8, // matching Radius.md roughly
+                border: `1px solid ${Colors.border.primary}`,
+                backgroundColor: Colors.background.tertiary,
+                color: Colors.text.primary,
+                fontSize: '16px',
+                outline: 'none',
+                fontFamily: 'inherit',
+              }
+            })
+          ) : (
+            <TouchableOpacity
+              style={styles.dateSelector}
+              onPress={() => { setShowDatePicker(true); setStep(Math.max(step, 1)); }}
+            >
+              <View style={styles.dateIconBox}>
+                <Ionicons name="calendar" size={20} color={Colors.accent.primary} />
+              </View>
+              <Text style={styles.dateText}>
+                {selectedDate.toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </Text>
+              <Ionicons name="chevron-forward" size={18} color={Colors.text.tertiary} />
+            </TouchableOpacity>
+          )}
         </View>
 
-        {showDatePicker && (
+        {Platform.OS !== 'web' && showDatePicker && (
           <DateTimePicker
             value={selectedDate}
             mode="date"
@@ -338,7 +403,7 @@ const TableBookingScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: Math.max(40, insets.bottom + 20) }} />
       </ScrollView>
     </View>
   );

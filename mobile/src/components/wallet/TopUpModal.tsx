@@ -6,6 +6,9 @@ import {
   Modal,
   TouchableOpacity,
   Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Button from '../common/Button';
@@ -38,12 +41,14 @@ const TopUpModal: React.FC<TopUpModalProps> = ({
     const topUpAmount = parseFloat(amount);
     
     if (isNaN(topUpAmount) || topUpAmount < 50) {
-      Alert.alert('Invalid Amount', 'Please enter a valid amount (minimum ₹50)');
+      if (Platform.OS === 'web') window.alert('Please enter a valid amount (minimum ₹50)');
+      else Alert.alert('Invalid Amount', 'Please enter a valid amount (minimum ₹50)');
       return;
     }
 
     if (topUpAmount > 10000) {
-      Alert.alert('Amount Too High', 'Maximum top-up amount is ₹10,000');
+      if (Platform.OS === 'web') window.alert('Maximum top-up amount is ₹10,000');
+      else Alert.alert('Amount Too High', 'Maximum top-up amount is ₹10,000');
       return;
     }
 
@@ -53,7 +58,8 @@ const TopUpModal: React.FC<TopUpModalProps> = ({
       setSelectedAmount(null);
       onClose();
     } catch (error) {
-      Alert.alert('Top-up Failed', 'Please try again');
+      if (Platform.OS === 'web') window.alert('Please try again');
+      else Alert.alert('Top-up Failed', 'Please try again');
     }
   };
 
@@ -75,7 +81,10 @@ const TopUpModal: React.FC<TopUpModalProps> = ({
       animationType="slide"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.overlay}
+      >
         <View style={styles.modal}>
           <View style={styles.header}>
             <Text style={styles.title}>Top Up Wallet</Text>
@@ -84,7 +93,7 @@ const TopUpModal: React.FC<TopUpModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          <View style={styles.content}>
+          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             <Text style={styles.subtitle}>Quick Select</Text>
             <View style={styles.quickAmounts}>
               {quickAmounts.map((value) => (
@@ -143,9 +152,9 @@ const TopUpModal: React.FC<TopUpModalProps> = ({
               disabled={currentAmount < 50}
               size="large"
             />
-          </View>
+          </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
@@ -187,17 +196,17 @@ const styles = StyleSheet.create({
   quickAmounts: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    justifyContent: 'space-between',
     marginBottom: 24,
   },
   quickAmount: {
-    flex: 1,
-    minWidth: '45%',
+    width: '48%',
     padding: 12,
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
     alignItems: 'center',
+    marginBottom: 12,
   },
   selectedAmount: {
     borderColor: '#007AFF',

@@ -8,17 +8,23 @@ import {
   ScrollView,
   Alert,
   Image,
+  StatusBar,
+  useWindowDimensions,
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { RootState } from '../../store/store';
 import { setUser } from '../../store/slices/authSlice';
-
 import { authApi } from '../../services/api/authApi';
+import { Colors, Radius, Spacing } from '../../theme/colors';
+import { Typography } from '../../theme/typography';
 
 const EditProfileScreen = ({ navigation }: any) => {
   const { user } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch();
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
 
   const [fullName, setFullName] = useState(user?.fullName || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -50,160 +56,210 @@ const EditProfileScreen = ({ navigation }: any) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.avatarSection}>
-        <View style={styles.avatarContainer}>
-          {user?.avatar ? (
-            <Image source={{ uri: user.avatar }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Ionicons name="person" size={50} color="#fff" />
+    <View style={styles.mainContainer}>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.background.primary} />
+      <ScrollView 
+        style={styles.container}
+        contentContainerStyle={[styles.scrollContent, isTablet && { width: '100%', maxWidth: 800, alignSelf: 'center' }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Avatar Section */}
+        <View style={styles.avatarSection}>
+          <View style={styles.avatarContainer}>
+            {user?.avatar ? (
+              <Image source={{ uri: user.avatar }} style={styles.avatar} />
+            ) : (
+              <LinearGradient colors={Colors.gradients.goldCta} style={styles.avatarPlaceholder}>
+                <Ionicons name="person" size={50} color={Colors.background.primary} />
+              </LinearGradient>
+            )}
+            <TouchableOpacity style={styles.changeAvatarButton} activeOpacity={0.7}>
+              <Ionicons name="camera" size={18} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.changePhotoText}>Change Photo</Text>
+        </View>
+
+        {/* Form Details */}
+        <View style={styles.form}>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.label}>Full Name</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="person-outline" size={20} color={Colors.accent.primary} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={fullName}
+                onChangeText={setFullName}
+                placeholder="Enter your full name"
+                placeholderTextColor={Colors.text.tertiary}
+              />
             </View>
-          )}
-          <TouchableOpacity style={styles.changeAvatarButton}>
-            <Ionicons name="camera" size={20} color="#fff" />
+          </View>
+
+          <View style={styles.inputWrapper}>
+            <Text style={styles.label}>Email</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="mail-outline" size={20} color={Colors.accent.primary} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Enter your email address"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                placeholderTextColor={Colors.text.tertiary}
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputWrapper}>
+            <Text style={styles.label}>Phone Number</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="call-outline" size={20} color={Colors.accent.primary} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="Enter your phone number"
+                keyboardType="phone-pad"
+                placeholderTextColor={Colors.text.tertiary}
+              />
+            </View>
+          </View>
+
+          {/* Action Button */}
+          <TouchableOpacity
+            style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={isLoading}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={Colors.gradients.goldCta}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.saveGradient}
+            >
+              <Text style={styles.saveButtonText}>
+                {isLoading ? 'Saving Changes...' : 'Save Changes'}
+              </Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
-        <Text style={styles.changePhotoText}>Change Photo</Text>
-      </View>
-
-      <View style={styles.form}>
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Full Name</Text>
-          <TextInput
-            style={styles.input}
-            value={fullName}
-            onChangeText={setFullName}
-            placeholder="Enter your full name"
-            placeholderTextColor="#999"
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="Enter your email"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            placeholderTextColor="#999"
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Phone</Text>
-          <TextInput
-            style={styles.input}
-            value={phone}
-            onChangeText={setPhone}
-            placeholder="Enter your phone number"
-            keyboardType="phone-pad"
-            placeholderTextColor="#999"
-          />
-        </View>
-
-        <TouchableOpacity
-          style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
-          onPress={handleSave}
-          disabled={isLoading}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.saveButtonText}>
-            {isLoading ? 'Saving...' : 'Save Changes'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+    backgroundColor: Colors.background.primary,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+  },
+  scrollContent: {
+    paddingBottom: 40,
   },
   avatarSection: {
-    backgroundColor: '#fff',
-    paddingVertical: 30,
+    backgroundColor: Colors.background.secondary,
+    paddingVertical: 35,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: Colors.border.primary,
+    borderBottomLeftRadius: Radius.xl,
+    borderBottomRightRadius: Radius.xl,
   },
   avatarContainer: {
     position: 'relative',
-    marginBottom: 10,
+    marginBottom: 14,
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 108,
+    height: 108,
+    borderRadius: 54,
     borderWidth: 3,
-    borderColor: '#007AFF',
+    borderColor: Colors.accent.primary,
   },
   avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#007AFF',
+    width: 108,
+    height: 108,
+    borderRadius: 54,
     justifyContent: 'center',
     alignItems: 'center',
   },
   changeAvatarButton: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#007AFF',
-    width: 35,
-    height: 35,
-    borderRadius: 17.5,
+    bottom: 2,
+    right: 2,
+    backgroundColor: Colors.accent.secondary,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: '#fff',
+    borderColor: Colors.background.secondary,
   },
   changePhotoText: {
-    fontSize: 16,
-    color: '#007AFF',
+    ...Typography.label,
+    color: Colors.accent.primary,
     fontWeight: '600',
   },
   form: {
-    padding: 20,
+    padding: Spacing.xl,
+    marginTop: Spacing.md,
   },
-  inputContainer: {
-    marginBottom: 20,
+  inputWrapper: {
+    marginBottom: Spacing.xl,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
+    ...Typography.labelSm,
+    color: Colors.text.secondary,
     marginBottom: 8,
+    fontWeight: '600',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background.input,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border.primary,
+    paddingHorizontal: Spacing.lg,
+    height: 56,
+  },
+  inputIcon: {
+    marginRight: Spacing.md,
   },
   input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
+    flex: 1,
+    color: Colors.text.primary,
     fontSize: 16,
-    color: '#000',
+    height: '100%',
   },
   saveButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 20,
+    borderRadius: Radius.button,
+    overflow: 'hidden',
+    shadowColor: Colors.accent.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+    marginTop: Spacing.lg,
   },
   saveButtonDisabled: {
-    backgroundColor: '#C7C7CC',
+    opacity: 0.7,
+  },
+  saveGradient: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
   },
   saveButtonText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '600',
+    ...Typography.button,
+    color: Colors.background.primary,
   },
 });
 

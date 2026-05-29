@@ -24,9 +24,10 @@ export const fetchOrders = createAsyncThunk('orders/fetchOrders', async () => {
 export const createOrder = createAsyncThunk(
   'orders/createOrder',
   async (orderData: {
-    items: { menuItemId: string; quantity: number }[];
+    items: { menuItemId: string | number; quantity: number }[];
     orderType: 'delivery' | 'pickup' | 'dine_in';
     paymentMethod: 'wallet' | 'razorpay';
+    paymentDetails?: any;
     slotTime?: string;
   }) => {
     const response = await orderApi.createOrder(orderData);

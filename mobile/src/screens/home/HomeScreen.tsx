@@ -29,12 +29,12 @@ import LoyaltyCardWidget from '../../components/home/LoyaltyCardWidget';
 
 
 const CATEGORIES = [
-  { id: 'all', label: 'All', icon: 'grid' as const, color: Colors.accent.primary },
-  { id: 'Beverages', label: 'Drinks', icon: 'cafe' as const, color: '#F59E0B' },
-  { id: 'Snacks', label: 'Snacks', icon: 'fast-food' as const, color: '#10B981' },
-  { id: 'Main Course', label: 'Meals', icon: 'restaurant' as const, color: '#8B5CF6' },
-  { id: 'Desserts', label: 'Desserts', icon: 'ice-cream' as const, color: '#EC4899' },
-  { id: 'Breakfast', label: 'Breakfast', icon: 'sunny' as const, color: '#F97316' },
+  { id: 'ALL', label: 'All', icon: 'grid' as const, color: Colors.accent.primary },
+  { id: 'BEVERAGES', label: 'Drinks', icon: 'cafe' as const, color: '#F59E0B' },
+  { id: 'SNACKS', label: 'Snacks', icon: 'fast-food' as const, color: '#10B981' },
+  { id: 'MAIN_COURSE', label: 'Meals', icon: 'restaurant' as const, color: '#8B5CF6' },
+  { id: 'DESSERTS', label: 'Desserts', icon: 'ice-cream' as const, color: '#EC4899' },
+  { id: 'BREAKFAST', label: 'Breakfast', icon: 'sunny' as const, color: '#F97316' },
 ];
 
 const HomeScreen: React.FC = () => {
@@ -172,7 +172,7 @@ const HomeScreen: React.FC = () => {
 
       <TouchableOpacity
         style={styles.quickActionBtn}
-        onPress={() => (navigation as any).navigate('Profile', { screen: 'Premium' })}
+        onPress={() => (navigation as any).navigate('Profile', { screen: 'Reservation' })}
       >
         <LinearGradient colors={['rgba(139, 92, 246, 0.15)', 'rgba(139, 92, 246, 0.05)']} style={styles.quickActionIcon}>
           <Ionicons name="calendar" size={22} color="#8B5CF6" />
@@ -339,7 +339,7 @@ const HomeScreen: React.FC = () => {
     <TouchableOpacity
       style={styles.dineInCard}
       activeOpacity={0.9}
-      onPress={() => (navigation as any).navigate('Profile', { screen: 'Premium' })}
+      onPress={() => (navigation as any).navigate('Profile', { screen: 'TableBooking' })}
     >
       <LinearGradient
         colors={Colors.gradients.dineIn}

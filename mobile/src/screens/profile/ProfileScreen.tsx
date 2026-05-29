@@ -79,9 +79,9 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     {
       title: 'Activity',
       items: [
-        { id: '4', title: 'Order History', icon: 'time-outline', onPress: () => navigation.navigate('Home', { screen: 'OrderHistory' }) },
+        { id: '4', title: 'Order History', icon: 'time-outline', onPress: () => navigation.navigate('Cart', { screen: 'OrderHistory' }) },
         { id: '5', title: 'Wallet', icon: 'wallet-outline', onPress: () => navigation.navigate('Wallet') },
-        { id: '6', title: 'Reservations', icon: 'calendar-outline', onPress: () => navigation.navigate('Home') },
+        { id: '6', title: 'Reservations', icon: 'calendar-outline', onPress: () => navigation.navigate('Reservation') },
       ],
     },
     {

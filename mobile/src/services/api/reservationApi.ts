@@ -8,6 +8,7 @@ export interface Reservation {
     partySize: number;
     status: 'active' | 'completed' | 'cancelled';
     tableNumber?: number;
+    diningArea?: string;
     specialRequests?: string;
     createdAt: string;
 }
@@ -28,9 +29,10 @@ const reservationApi = {
 
     /** Create a new reservation */
     create: async (data: {
-        vendorId: string;
+        vendorId: number;
         reservationTime: string;
         partySize: number;
+        diningArea: string;
         specialRequests?: string;
     }): Promise<{ success: boolean; data: Reservation; message: string }> => {
         const response = await apiClient.post('/api/reservations', data);
