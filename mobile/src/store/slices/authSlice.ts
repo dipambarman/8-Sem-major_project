@@ -43,8 +43,14 @@ export const loginUser = createAsyncThunk(
       console.log('✅ Login API successful');
       return response;
     } catch (error: any) {
-      console.error('❌ Login API failed:', error.response?.data || error);
-      let errorMessage = error.response?.data?.error || 'Login failed';
+      console.error('❌ Login API failed:', error);
+      let errorMessage = 'Login failed';
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
       
       // Extract detailed validation messages if available
       if (error.response?.data?.details && Array.isArray(error.response.data.details)) {
@@ -66,8 +72,14 @@ export const registerUser = createAsyncThunk(
       console.log('✅ Registration API successful');
       return response;
     } catch (error: any) {
-      console.error('❌ Registration API failed:', error.response?.data || error);
-      let errorMessage = error.response?.data?.error || 'Registration failed';
+      console.error('❌ Registration API failed:', error);
+      let errorMessage = 'Registration failed';
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
       
       // Extract detailed validation messages if available
       if (error.response?.data?.details && Array.isArray(error.response.data.details)) {

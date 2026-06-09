@@ -23,11 +23,34 @@ const RegisterScreen: React.FC = ({ navigation }: any) => {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
+
+    // Client-side validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Weak Password', 'Password must be at least 6 characters long');
+      return;
+    }
+
+    if (fullName.trim().length < 2) {
+      Alert.alert('Invalid Name', 'Please enter your full name');
+      return;
+    }
+
+    if (phone.trim().length < 10) {
+      Alert.alert('Invalid Phone', 'Please enter a valid phone number');
+      return;
+    }
+
     try {
-      await dispatch(registerUser({ email, password, fullName, phone })).unwrap();
+      await dispatch(registerUser({ email: email.trim(), password, fullName: fullName.trim(), phone: phone.trim() })).unwrap();
       Alert.alert('Welcome!', 'Your account has been created successfully!');
-    } catch (err) {
-      Alert.alert('Registration Failed', error || 'An error occurred');
+    } catch (err: any) {
+      Alert.alert('Registration Failed', (typeof err === 'string' ? err : err?.message) || 'An error occurred');
     }
   };
 

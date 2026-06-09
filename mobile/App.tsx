@@ -26,6 +26,7 @@ import { initializeSocket } from './src/services/socket/socketService';
 
 // Components
 import LoadingSpinner from './src/components/common/LoadingSpinner';
+import GlobalRazorpay, { setGlobalRazorpayRef } from './src/components/payment/GlobalRazorpay';
 
 // Utils
 import { getToken } from './src/utils/storage';
@@ -66,6 +67,7 @@ const AppContent: React.FC = () => {
   return (
     <>
       <AppNavigator />
+      <GlobalRazorpay ref={(ref) => setGlobalRazorpayRef(ref)} />
       <StatusBar
         style="auto"
         backgroundColor="transparent"

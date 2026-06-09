@@ -1,12 +1,11 @@
 import prisma from '../utils/database.js';
 import { createRazorpayOrder, verifyPayment } from '../services/paymentService.js';
-import paymentService from '../services/paymentService.js';
+import getRazorpay from '../services/paymentService.js';
 
 class PaymentController {
-  // Helper to get initialized Razorpay instance (dynamically imported each time)
+  // Helper to get initialized Razorpay instance (lazily initialized)
   _getRazorpayInstance() {
-    // Re-import to ensure we get current state
-    return paymentService || null;
+    return getRazorpay();
   }
 
   // Create Razorpay order

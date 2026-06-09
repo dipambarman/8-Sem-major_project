@@ -79,13 +79,25 @@ const LoginScreen: React.FC = ({ navigation }: any) => {
       return;
     }
 
+    // Client-side validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Weak Password', 'Password must be at least 6 characters long');
+      return;
+    }
+
     try {
       console.log('🔵 Attempting login for:', email.trim());
       const result = await dispatch(loginUser({ email: email.trim(), password })).unwrap();
       console.log('✅ Login successful:', result);
-    } catch (err) {
+    } catch (err: any) {
       console.error('❌ Login error in component:', err);
-      Alert.alert('Login Failed', (err as string) || 'An error occurred');
+      Alert.alert('Login Failed', (typeof err === 'string' ? err : err?.message) || 'Invalid email or password');
     }
   };
 

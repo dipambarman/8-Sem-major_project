@@ -14,21 +14,24 @@ const getRazorpay = () => {
         key_id: process.env.RAZORPAY_KEY_ID,
         key_secret: process.env.RAZORPAY_KEY_SECRET,
       });
+      console.log('✅ Razorpay initialized with key:', process.env.RAZORPAY_KEY_ID);
       return razorpay;
     }
 
     console.warn('⚠️ Razorpay credentials not found — payment features will be unavailable');
+    console.warn('   RAZORPAY_KEY_ID:', process.env.RAZORPAY_KEY_ID ? 'SET' : 'MISSING');
+    console.warn('   RAZORPAY_KEY_SECRET:', process.env.RAZORPAY_KEY_SECRET ? 'SET' : 'MISSING');
     return null;
   } catch (error) {
     console.error('❌ Failed to initialize Razorpay:', (error && error.message) ? error.message : error);
-
     return null;
   }
 };
 
 
 export const createRazorpayOrder = async (amount, currency = 'INR', receipt = null) => {
-  if (!razorpay) {
+  const instance = getRazorpay();
+  if (!instance) {
     return { success: false, error: 'Razorpay not configured' };
   }
 
@@ -40,7 +43,7 @@ export const createRazorpayOrder = async (amount, currency = 'INR', receipt = nu
   };
 
   try {
-    const order = await razorpay.orders.create(options);
+    const order = await instance.orders.create(options);
     return { success: true, data: order };
   } catch (error) {
     console.error('Error creating Razorpay order:', error);
@@ -60,4 +63,6 @@ export const verifyPayment = (paymentId, orderId, signature) => {
   return expectedSignature === signature;
 };
 
-export default razorpay;
+// Export the lazy getter function (NOT the null variable)
+export default getRazorpay;
+
