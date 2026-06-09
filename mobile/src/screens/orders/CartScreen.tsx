@@ -117,7 +117,7 @@ const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
         source={
           item.image
             ? { uri: item.image }
-            : require('../../../assets/placeholder-food.png')
+            : require('../../../assets/placeholder-food.jpg')
         }
         style={styles.itemImage}
       />

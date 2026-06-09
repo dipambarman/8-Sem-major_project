@@ -13,8 +13,7 @@ config.resolver.blockList = [
   // OneDrive sync temp files
   /.*\.~lock\..*/,
   /.*~\$.*/,
-  // dist & test artifacts
-  /.*\/dist\/.*/,
+  // test artifacts
   /.*\/test-entry\.js/,
 ];
 

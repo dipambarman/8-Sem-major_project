@@ -38,11 +38,17 @@ console.log('✅ API Base URL:', API_BASE_URL);
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000, // 15 second timeout
+  timeout: 90000, // 90 second timeout — Render free-tier cold starts can take 30-60s + DB connection time
   headers: {
     'Content-Type': 'application/json',
   }
 });
+
+// Retry configuration
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 2000; // Base delay between retries (doubles each attempt)
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Automatically attach Bearer token and bypass localtunnel warnings
 apiClient.interceptors.request.use(async (config) => {
@@ -64,26 +70,42 @@ apiClient.interceptors.request.use(async (config) => {
   return config;
 });
 
-// Enhanced response interceptor with better error handling
+// Enhanced response interceptor with retry logic for network errors
 apiClient.interceptors.response.use(
   (response) => {
     console.log(`🟢 API Response: ${response.status} ${response.config.url}`);
-    console.log('📥 Response Data:', JSON.stringify(response.data, null, 2));
     return response;
   },
-  (error) => {
+  async (error) => {
+    const config = error.config;
+
+    // Only retry on network errors or 5xx server errors (not on 4xx client errors)
+    const isNetworkError = !error.response && error.message === 'Network Error';
+    const isTimeoutError = error.code === 'ECONNABORTED';
+    const isServerError = error.response && error.response.status >= 500;
+    const isRetryable = isNetworkError || isTimeoutError || isServerError;
+
+    if (isRetryable && config && (!config.__retryCount || config.__retryCount < MAX_RETRIES)) {
+      config.__retryCount = (config.__retryCount || 0) + 1;
+      const delay = RETRY_DELAY_MS * Math.pow(2, config.__retryCount - 1);
+      console.warn(`⚠️ Request failed (attempt ${config.__retryCount}/${MAX_RETRIES}). Retrying in ${delay}ms...`);
+      console.warn(`   Reason: ${isNetworkError ? 'Network Error' : isTimeoutError ? 'Timeout' : `Server Error ${error.response?.status}`}`);
+      await sleep(delay);
+      return apiClient(config);
+    }
+
+    // Final failure — log details
     if (error.response) {
-      // Server responded with error status
-      console.error(`🔴 API Error Response: ${error.response.status} ${error.config.url}`);
+      console.error(`🔴 API Error Response: ${error.response.status} ${error.config?.url}`);
       console.error('📥 Error Data:', JSON.stringify(error.response.data, null, 2));
     } else if (error.request) {
-      // Request made but no response
-      console.error('🔴 No response received from server');
+      console.error('🔴 No response received from server after all retries');
       const fullUrl = `${error.config?.baseURL || ''}${error.config?.url || ''}`;
       console.error('📤 Request made to:', fullUrl);
       console.error('❌ Network Error Details:', error.message);
+      // Override error message with user-friendly text
+      error.message = 'Server is starting up. Please wait a moment and try again.';
     } else {
-      // Error in request setup
       console.error('🔴 Error setting up request:', error.message);
     }
     return Promise.reject(error);

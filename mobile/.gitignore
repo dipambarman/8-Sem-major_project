@@ -32,8 +32,8 @@ ehthumbs.db
 .env.production.local
 
 # Build outputs
-dist/
-build/
+/dist/
+/build/
 *.apk
 *.aab
 *.ipa

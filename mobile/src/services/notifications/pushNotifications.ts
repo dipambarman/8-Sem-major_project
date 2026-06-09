@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { SchedulableTriggerInputTypes } from 'expo-notifications';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 Notifications.setNotificationHandler({
@@ -13,13 +14,29 @@ Notifications.setNotificationHandler({
   }),
 });
 
+/**
+ * Get the EAS project ID from environment or app config.
+ */
+const getProjectId = (): string | undefined => {
+  // Prefer the env variable
+  if (process.env.EXPO_PUBLIC_PROJECT_ID) {
+    return process.env.EXPO_PUBLIC_PROJECT_ID;
+  }
+  // Fall back to app.json / app.config extra.eas.projectId
+  const easProjectId = Constants.expoConfig?.extra?.eas?.projectId;
+  if (easProjectId) {
+    return easProjectId;
+  }
+  return undefined;
+};
+
 export const registerForPushNotifications = async (): Promise<string | null> => {
-  // Skip web push notifications for now
+  // Skip web push notifications
   if (Platform.OS === 'web') {
     return null;
   }
 
-  let token = null;
+  let token: string | null = null;
 
   if (Device.isDevice) {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -31,29 +48,44 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
     }
 
     if (finalStatus !== 'granted') {
-      alert('Failed to get push token for push notification!');
+      console.warn('⚠️ Push notification permission not granted');
       return null;
     }
 
     try {
-      token = (await Notifications.getExpoPushTokenAsync({
-        projectId: process.env.EXPO_PUBLIC_PROJECT_ID || 'dummy-project-id', // Optional fallback for project id
-      })).data;
-    } catch (error) {
-      // Intentionally suppressing the warning about Expo Go SDK 53 push notifications
-      // to keep the console clean.
+      const projectId = getProjectId();
+      if (!projectId) {
+        console.warn('⚠️ No EAS project ID found. Push notifications will not work.');
+        console.warn('   Set EXPO_PUBLIC_PROJECT_ID in your .env or configure extra.eas.projectId in app.json');
+        return null;
+      }
+
+      console.log('🔔 Requesting push token with projectId:', projectId);
+      token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+      console.log('✅ Push token obtained:', token);
+    } catch (error: any) {
+      console.warn('⚠️ Failed to get push token:', error.message);
+      // Common in Expo Go — will work in production build
       token = null;
     }
   } else {
-    alert('Must use physical device for Push Notifications');
+    console.warn('⚠️ Push notifications require a physical device');
   }
 
   if (Platform.OS === 'android') {
-    Notifications.setNotificationChannelAsync('default', {
+    await Notifications.setNotificationChannelAsync('default', {
       name: 'default',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#FF231F7C',
+    });
+
+    // Order updates channel
+    await Notifications.setNotificationChannelAsync('orders', {
+      name: 'Order Updates',
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#FFD700',
     });
   }
 
