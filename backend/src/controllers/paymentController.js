@@ -76,7 +76,8 @@ class PaymentController {
       console.error('Create Razorpay order error:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to create payment order'
+        error: 'Failed to create payment order',
+        details: error.message || error.toString()
       });
     }
   }
