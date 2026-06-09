@@ -43,8 +43,8 @@ class PaymentController {
         currency,
         receipt: `receipt_${Date.now()}`,
         notes: {
-          userId,
-          orderId: orderId || 'wallet_topup'
+          userId: String(userId),
+          orderId: orderId ? String(orderId) : 'wallet_topup'
         }
       });
 
