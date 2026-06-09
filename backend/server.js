@@ -12,6 +12,7 @@ import SocketManager from './src/sockets/index.js';
 import { SOCKET_CONFIG } from './src/config/socket.js';
 
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 
 const io = new Server(server, SOCKET_CONFIG);

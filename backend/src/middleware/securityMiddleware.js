@@ -11,11 +11,18 @@ class SecurityMiddleware {
     max: 1000,
     message: {
       success: false,
-      error: 'Too many requests from this IP, please try again later.',
+      error: 'Too many requests, please try again later.',
     },
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) => req.path === '/health',
+    skip: (req) => req.path.endsWith('/health') || req.path === '/',
+    keyGenerator: (req) => {
+      if (req.headers.authorization) {
+        const token = req.headers.authorization.split(' ')[1];
+        if (token) return token;
+      }
+      return req.ip;
+    }
   });
 
   // Strict rate limiting for auth endpoints
@@ -33,11 +40,14 @@ class SecurityMiddleware {
   // Payment endpoint rate limiting
   static paymentLimiter = rateLimit({
     windowMs: 60 * 1000, // 1 minute
-    max: 5,
+    max: 10,
     message: {
       success: false,
       error: 'Too many payment requests, please try again later.',
     },
+    keyGenerator: (req) => {
+      return req.user?.id || req.ip;
+    }
   });
 
   // Request sanitization
