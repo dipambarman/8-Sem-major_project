@@ -4,7 +4,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
-import { testConnection } from './src/utils/database.js';
+import prisma, { testConnection } from './src/utils/database.js';
 import routes from './src/routes/index.js';
 import ErrorMiddleware from './src/middleware/errorMiddleware.js';
 import SecurityMiddleware from './src/middleware/securityMiddleware.js';
@@ -63,6 +63,34 @@ app.use(SecurityMiddleware.requestLogger);
 // ─── ROUTES ───────────────────────────────────────────────────────────────
 
 app.use('/api', routes);
+
+// API-level health check (accessible from mobile as /api/health)
+app.get('/api/health', async (req, res) => {
+  let dbStatus = 'unknown';
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    dbStatus = 'connected';
+  } catch {
+    dbStatus = 'disconnected';
+  }
+  res.json({
+    success: true,
+    message: 'Smart Canteen API is running',
+    database: dbStatus,
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
+// Root route
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Welcome to the Smart Canteen API',
+    docs: 'Append /api to the URL to access endpoints',
+    health: 'Append /health to check server status'
+  });
+});
 
 // Health check
 app.get('/health', (req, res) => {

@@ -21,7 +21,7 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
  * @param {number} timeout Timeout per attempt in ms (default 3000).
  * @returns {Promise<boolean>}
  */
-export const testConnection = async (retries = 3, timeout = 3000) => {
+export const testConnection = async (retries = 5, timeout = 10000) => {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       console.log(`🔌 Testing database connection... (Attempt ${attempt}/${retries})`);
@@ -43,8 +43,9 @@ export const testConnection = async (retries = 3, timeout = 3000) => {
     } catch (error) {
       console.error(`❌ Connection failed (Attempt ${attempt}):`, error.message || error);
       if (attempt < retries) {
-        console.log('⏳ Retrying connection...');
-        await delay(1000);
+        const retryDelay = 2000 * attempt; // Progressive backoff: 2s, 4s, 6s, 8s
+        console.log(`⏳ Retrying connection in ${retryDelay / 1000}s...`);
+        await delay(retryDelay);
       } else {
         console.error('❌ All connection attempts failed.');
         throw error;

@@ -137,7 +137,7 @@ class ValidationMiddleware {
       .withMessage('Party size must be between 1-20'),
 
     body('diningArea')
-      .isIn(['main', 'outdoor', 'private', 'counter'])
+      .isIn(['main', 'outdoor', 'private', 'counter', 'rooftop'])
       .withMessage('Valid dining area is required'),
 
     body('contactPhone')
