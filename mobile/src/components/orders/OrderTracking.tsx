@@ -95,7 +95,7 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.orderId}>Order #{order.id.slice(-6).toUpperCase()}</Text>
+        <Text style={styles.orderId}>Order #{String(order.id).slice(-6).toUpperCase()}</Text>
         <Text style={styles.estimatedTime}>{getEstimatedTime()}</Text>
       </View>
 

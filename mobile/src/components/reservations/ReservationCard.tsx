@@ -67,7 +67,7 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
       <View style={styles.header}>
         <View style={styles.reservationInfo}>
           <Text style={styles.reservationId}>
-            Reservation #{reservation.id.slice(-6).toUpperCase()}
+            Reservation #{String(reservation.id).slice(-6).toUpperCase()}
           </Text>
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor(reservation.status) }]}>
             <Text style={styles.statusText}>

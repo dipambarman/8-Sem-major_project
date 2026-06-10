@@ -6,11 +6,13 @@ import { Transaction } from '../../types/api';
 interface TransactionHistoryProps {
   transactions: Transaction[];
   loading?: boolean;
+  disableVirtualization?: boolean;
 }
 
 const TransactionHistory: React.FC<TransactionHistoryProps> = ({
   transactions,
   loading = false,
+  disableVirtualization = false,
 }) => {
   const getTransactionIcon = (type: string) => {
     switch (type) {
@@ -53,8 +55,8 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
         <Text style={styles.transactionDate}>
           {new Date(item.createdAt).toLocaleDateString()}
         </Text>
-        <Text style={[styles.transactionStatus, styles[item.status]]}>
-          {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+        <Text style={[styles.transactionStatus, styles[item.status || 'completed']]}>
+          {(item.status || 'completed').charAt(0).toUpperCase() + (item.status || 'completed').slice(1)}
         </Text>
       </View>
       
@@ -81,10 +83,30 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
     </View>
   );
 
+  const renderEmptyContainerStyle = transactions.length === 0 ? styles.emptyContainer : undefined;
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <Text>Loading transactions...</Text>
+      </View>
+    );
+  }
+
+  if (disableVirtualization) {
+    return (
+      <View style={styles.container}>
+        {transactions.length === 0 ? (
+          renderEmptyState()
+        ) : (
+          <View style={renderEmptyContainerStyle}>
+            {transactions.map((item) => (
+              <React.Fragment key={String(item.id)}>
+                {renderTransaction({ item })}
+              </React.Fragment>
+            ))}
+          </View>
+        )}
       </View>
     );
   }
@@ -94,10 +116,10 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
       <FlatList
         data={transactions}
         renderItem={renderTransaction}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         ListEmptyComponent={renderEmptyState}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={transactions.length === 0 ? styles.emptyContainer : undefined}
+        contentContainerStyle={renderEmptyContainerStyle}
       />
     </View>
   );

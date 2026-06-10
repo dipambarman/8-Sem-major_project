@@ -61,7 +61,7 @@ const WalletScreen: React.FC = () => {
   };
 
   const handleViewTransactions = () => {
-    navigation.navigate('Transactions' as never);
+    navigation.navigate('TransactionHistory' as never);
   };
 
   // Handle what happens when QR data is scanned
@@ -198,6 +198,7 @@ const WalletScreen: React.FC = () => {
           <TransactionHistory
             transactions={transactions.slice(0, 10)}
             loading={isLoading}
+            disableVirtualization={true}
           />
         </View>
       </ScrollView>

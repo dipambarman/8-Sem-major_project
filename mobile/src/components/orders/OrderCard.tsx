@@ -59,7 +59,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onPress, onTrack }) => {
     <TouchableOpacity style={styles.card} onPress={onPress}>
       <View style={styles.header}>
         <View style={styles.orderInfo}>
-          <Text style={styles.orderId}>Order #{order.id.slice(-6).toUpperCase()}</Text>
+          <Text style={styles.orderId}>Order #{String(order.id).slice(-6).toUpperCase()}</Text>
           <View style={styles.orderMeta}>
             <Ionicons
               name={getOrderTypeIcon(order.orderType)}

@@ -53,7 +53,7 @@ const OrderHistoryScreen: React.FC = () => {
       <TouchableOpacity style={s.card} onPress={() => navigation.navigate('OrderTracking', { orderId: item.id })}>
         <View style={s.cardHeader}>
           <View>
-            <Text style={s.orderId}>Order #{item.id.slice(-6)}</Text>
+            <Text style={s.orderId}>Order #{String(item.id).slice(-6)}</Text>
             <Text style={s.orderDate}>{new Date(item.createdAt).toLocaleDateString()} • {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
           </View>
           <View style={[s.statusBadge, { backgroundColor: sc.bg }]}>
@@ -88,7 +88,7 @@ const OrderHistoryScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
       <View style={[isTablet && { width: '100%', maxWidth: 800, alignSelf: 'center', flex: 1 }]}>
-      <FlatList data={orders} keyExtractor={i => i.id} renderItem={renderOrder}
+      <FlatList data={orders} keyExtractor={i => String(i.id)} renderItem={renderOrder}
         contentContainerStyle={orders.length === 0 ? s.emptyWrap : s.list}
         ListEmptyComponent={
           <View style={s.empty}>

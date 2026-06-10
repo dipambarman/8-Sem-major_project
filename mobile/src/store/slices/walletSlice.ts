@@ -23,8 +23,13 @@ export const fetchWallet = createAsyncThunk('wallet/fetchWallet', async () => {
 
 export const topUpWallet = createAsyncThunk(
   'wallet/topUp',
-  async (amount: number) => {
-    const response = await walletApi.topUp(amount);
+  async (payload: { amount: number; paymentId?: string; orderId?: string; signature?: string }) => {
+    const response = await walletApi.topUp(
+      payload.amount,
+      payload.paymentId,
+      payload.orderId,
+      payload.signature
+    );
     return response.data;
   }
 );

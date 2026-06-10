@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { RootState, AppDispatch, store } from '../../store/store';
 import { logoutUser } from '../../store/slices/authSlice';
+import { fetchWallet } from '../../store/slices/walletSlice';
+import { fetchOrders } from '../../store/slices/orderSlice';
 import { Colors, Radius, Spacing } from '../../theme/colors';
 import { Typography } from '../../theme/typography';
 
@@ -28,6 +30,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
   const { user, isLoading, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { wallet } = useSelector((state: RootState) => state.wallet);
+  const { orders } = useSelector((state: RootState) => state.order);
+
+  useEffect(() => {
+    dispatch(fetchWallet());
+    dispatch(fetchOrders());
+  }, [dispatch]);
 
   console.log('🔵 ProfileScreen render - isAuthenticated:', isAuthenticated);
 
@@ -146,12 +155,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         {/* Stats */}
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{user?.totalOrders || 0}</Text>
+            <Text style={styles.statValue}>{orders?.length || 0}</Text>
             <Text style={styles.statLabel}>Orders</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>₹{user?.walletBalance || 0}</Text>
+            <Text style={styles.statValue}>₹{wallet?.balance?.toFixed(0) || '0'}</Text>
             <Text style={styles.statLabel}>Wallet</Text>
           </View>
           <View style={styles.statDivider} />

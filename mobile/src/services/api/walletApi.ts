@@ -7,8 +7,18 @@ const walletApi = {
     return response.data;
   },
 
-  topUp: async (amount: number): Promise<ApiResponse<{ wallet: Wallet; transaction: Transaction }>> => {
-    const response = await apiClient.post('/api/wallet/topup', { amount });
+  topUp: async (
+    amount: number,
+    paymentId?: string,
+    orderId?: string,
+    signature?: string
+  ): Promise<ApiResponse<{ wallet: Wallet; transaction: Transaction }>> => {
+    const response = await apiClient.post('/api/wallet/topup', {
+      amount,
+      paymentId,
+      orderId,
+      signature
+    });
     return response.data;
   },
 

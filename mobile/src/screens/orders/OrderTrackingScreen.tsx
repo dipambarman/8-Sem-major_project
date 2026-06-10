@@ -300,7 +300,7 @@ const OrderTrackingScreen: React.FC = () => {
           <View style={styles.header}>
             <View style={styles.headerRow}>
               <View>
-                <Text style={styles.orderId}>Order #{order.id.slice(-8).toUpperCase()}</Text>
+                <Text style={styles.orderId}>Order #{String(order.id).slice(-8).toUpperCase()}</Text>
                 <Text style={styles.orderDate}>
                   {new Date(order.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} • {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </Text>
