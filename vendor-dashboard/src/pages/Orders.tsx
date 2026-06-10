@@ -84,16 +84,18 @@ const Orders = ({ socket }) => {
 
   const handleStatusUpdate = async () => {
     try {
+      const estimatedTimeNum = estimatedTime ? parseInt(estimatedTime, 10) : undefined;
+
       await vendorApi.updateOrderStatus(
         selectedOrder.id,
         newStatus,
-        estimatedTime || undefined
+        estimatedTimeNum
       );
 
       setOrders(prev =>
         prev.map(order =>
           order.id === selectedOrder.id
-            ? { ...order, status: newStatus, estimatedTime }
+            ? { ...order, status: newStatus, estimatedTime: estimatedTimeNum }
             : order
         )
       );
@@ -103,7 +105,7 @@ const Orders = ({ socket }) => {
         socket.emit('orderStatusUpdate', {
           orderId: selectedOrder.id,
           status: newStatus,
-          estimatedTime,
+          estimatedTime: estimatedTimeNum,
         });
       }
 
@@ -119,26 +121,26 @@ const Orders = ({ socket }) => {
 
   const getStatusColor = (status) => {
     const colors = {
-      pending: 'warning',
-      confirmed: 'info',
-      preparing: 'secondary',
-      ready: 'success',
-      completed: 'success',
-      cancelled: 'error',
+      PENDING: 'warning',
+      CONFIRMED: 'info',
+      PREPARING: 'secondary',
+      READY: 'success',
+      COMPLETED: 'success',
+      CANCELLED: 'error',
     };
-    return colors[status] || 'default';
+    return colors[status] || colors[status?.toUpperCase()] || 'default';
   };
 
   const getStatusIcon = (status) => {
     const icons = {
-      pending: <Timer />,
-      confirmed: <CheckCircle />,
-      preparing: <Restaurant />,
-      ready: <LocalShipping />,
-      completed: <CheckCircle />,
-      cancelled: <Cancel />,
+      PENDING: <Timer />,
+      CONFIRMED: <CheckCircle />,
+      PREPARING: <Restaurant />,
+      READY: <LocalShipping />,
+      COMPLETED: <CheckCircle />,
+      CANCELLED: <Cancel />,
     };
-    return icons[status] || <Timer />;
+    return icons[status] || icons[status?.toUpperCase()] || <Timer />;
   };
 
   const filteredOrders = filterStatus === 'all'
@@ -147,12 +149,12 @@ const Orders = ({ socket }) => {
 
   const getNextStatus = (currentStatus) => {
     const statusFlow = {
-      pending: 'confirmed',
-      confirmed: 'preparing',
-      preparing: 'ready',
-      ready: 'completed',
+      PENDING: 'CONFIRMED',
+      CONFIRMED: 'PREPARING',
+      PREPARING: 'READY',
+      READY: 'COMPLETED',
     };
-    return statusFlow[currentStatus];
+    return statusFlow[currentStatus] || statusFlow[currentStatus?.toUpperCase()];
   };
 
   return (
@@ -170,11 +172,11 @@ const Orders = ({ socket }) => {
               onChange={(e) => setFilterStatus(e.target.value)}
             >
               <MenuItem value="all">All Orders</MenuItem>
-              <MenuItem value="pending">Pending</MenuItem>
-              <MenuItem value="confirmed">Confirmed</MenuItem>
-              <MenuItem value="preparing">Preparing</MenuItem>
-              <MenuItem value="ready">Ready</MenuItem>
-              <MenuItem value="completed">Completed</MenuItem>
+              <MenuItem value="PENDING">Pending</MenuItem>
+              <MenuItem value="CONFIRMED">Confirmed</MenuItem>
+              <MenuItem value="PREPARING">Preparing</MenuItem>
+              <MenuItem value="READY">Ready</MenuItem>
+              <MenuItem value="COMPLETED">Completed</MenuItem>
             </Select>
           </FormControl>
           <Button
@@ -290,20 +292,21 @@ const Orders = ({ socket }) => {
                 label="Status"
                 onChange={(e) => setNewStatus(e.target.value)}
               >
-                <MenuItem value="pending">Pending</MenuItem>
-                <MenuItem value="confirmed">Confirmed</MenuItem>
-                <MenuItem value="preparing">Preparing</MenuItem>
-                <MenuItem value="ready">Ready</MenuItem>
-                <MenuItem value="completed">Completed</MenuItem>
-                <MenuItem value="cancelled">Cancelled</MenuItem>
+                <MenuItem value="PENDING">Pending</MenuItem>
+                <MenuItem value="CONFIRMED">Confirmed</MenuItem>
+                <MenuItem value="PREPARING">Preparing</MenuItem>
+                <MenuItem value="READY">Ready</MenuItem>
+                <MenuItem value="COMPLETED">Completed</MenuItem>
+                <MenuItem value="CANCELLED">Cancelled</MenuItem>
               </Select>
             </FormControl>
 
-            {(newStatus === 'preparing' || newStatus === 'confirmed') && (
+            {(newStatus === 'PREPARING' || newStatus === 'CONFIRMED') && (
               <TextField
                 fullWidth
-                label="Estimated Ready Time"
-                type="time"
+                label="Estimated Ready Time (Minutes)"
+                type="number"
+                inputProps={{ min: 1, max: 120 }}
                 value={estimatedTime}
                 onChange={(e) => setEstimatedTime(e.target.value)}
                 InputLabelProps={{ shrink: true }}

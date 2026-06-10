@@ -25,6 +25,7 @@ import Orders from './pages/Orders';
 import MenuPage from './pages/Menu';
 import Reservations from './pages/Reservations';
 import Analytics from './pages/Analytics';
+import Login from './pages/Login';
 
 // Icons
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -101,6 +102,14 @@ const VendorApp = () => {
     return currentItem?.text || 'Smart Canteen Vendor';
   };
 
+  if (location.pathname === '/login') {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+      </Routes>
+    );
+  }
+
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
@@ -175,6 +184,7 @@ const VendorApp = () => {
           <Route path="/menu" element={<MenuPage />} />
           <Route path="/reservations" element={<Reservations />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="*" element={<Dashboard socket={socket} />} />
         </Routes>
       </Box>
     </Box>

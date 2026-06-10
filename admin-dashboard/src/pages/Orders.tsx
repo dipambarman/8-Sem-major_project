@@ -11,6 +11,7 @@ import {
   Show,
   SimpleForm,
   SelectInput,
+  TextInput,
   SimpleShowLayout,
   ArrayField,
   SingleFieldList,
