@@ -72,13 +72,15 @@ class PaymentController {
         }
       });
 
-    } catch (error) {
-      console.error('Create Razorpay order error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to create payment order',
-        details: error.message || error.toString()
-      });
+    } catch (error) {\r
+      console.error('Create Razorpay order error:', JSON.stringify(error, null, 2));\r
+      // Razorpay SDK throws structured errors like { error: { code, description, ... } }\r
+      const razorpayError = error?.error?.description || error?.message || 'Unknown payment error';\r
+      res.status(500).json({\r
+        success: false,\r
+        error: 'Failed to create payment order',\r
+        details: razorpayError\r
+      });\r
     }
   }
 

@@ -35,6 +35,7 @@ import { getToken } from './src/utils/storage';
 LogBox.ignoreLogs([
   'Non-serializable values were found in the navigation state',
   'AsyncStorage has been extracted from react-native',
+  'expo-notifications: Android Push notifications',
 ]);
 
 // SplashScreen.preventAutoHideAsync();

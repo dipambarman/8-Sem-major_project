@@ -96,13 +96,17 @@ apiClient.interceptors.response.use(
 
     // Final failure — log details
     if (error.response) {
-      console.error(`🔴 API Error Response: ${error.response.status} ${error.config?.url}`);
-      console.error('📥 Error Data:', JSON.stringify(error.response.data, null, 2));
+      console.warn(`🔴 API Error Response: ${error.response.status} ${error.config?.url}`);
+      console.warn('📥 Error Data:', JSON.stringify(error.response.data, null, 2));
 
       // Handle token expiration automatically (but NOT on auth endpoints where 401 = wrong credentials)
       const isAuthEndpoint = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/register');
       if (error.response.status === 401 && !isAuthEndpoint) {
         console.warn('⚠️ Token expired or invalid. Forcing logout...');
+        // Remove expired token from storage so it doesn't reload on next launch
+        import('../../utils/storage').then(({ removeToken }) => {
+          removeToken();
+        });
         import('../../store/store').then(({ store }) => {
           import('../../store/slices/authSlice').then(({ forceLogout }) => {
             store.dispatch(forceLogout());
