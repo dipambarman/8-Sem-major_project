@@ -23,10 +23,10 @@ const socketManager = new SocketManager(io);
 // ─── MIDDLEWARE ────────────────────────────────────────────────────────────
 
 // CORS MUST be first - before helmet and other middleware
-const corsOrigin = process.env.FRONTEND_URL || '*';
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', corsOrigin);
-  res.header('Access-Control-Allow-Credentials', corsOrigin === '*' ? 'false' : 'true');
+  const origin = req.headers.origin || '*';
+  res.header('Access-Control-Allow-Origin', origin);
+  res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Bypass-Tunnel-Reminder');
   res.header('Access-Control-Expose-Headers', 'Content-Length, X-Total-Count');
@@ -45,8 +45,10 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: corsOrigin,
-  credentials: corsOrigin !== '*',
+  origin: function (origin, callback) {
+    callback(null, true);
+  },
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Bypass-Tunnel-Reminder'],
   exposedHeaders: ['Content-Length', 'X-Total-Count'],
