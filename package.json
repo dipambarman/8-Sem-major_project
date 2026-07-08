@@ -1,4 +1,28 @@
 {
+  "name": "smart-canteen-management-system",
+  "version": "1.0.0",
+  "description": "A full-stack, cross-platform canteen management platform built with React Native (Expo), Node.js, Express.js, PostgreSQL, Prisma ORM, Socket.IO, and JWT authentication — supporting students, vendors, and administrators.",
+  "author": "Dipam Barman",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dipambarman/smart-canteen-management-system"
+  },
+  "keywords": [
+    "canteen-management",
+    "react-native",
+    "expo",
+    "nodejs",
+    "express",
+    "postgresql",
+    "prisma",
+    "socket-io",
+    "jwt-authentication",
+    "rbac",
+    "razorpay",
+    "full-stack",
+    "monorepo"
+  ],
   "devDependencies": {
     "prisma": "^7.8.0"
   }
